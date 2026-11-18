@@ -1,0 +1,540 @@
+2026-11-18 04:28:13  m5-macbook  burst
+    before: pid 41635, fds 11 threads 4 footprint 5408KB, "cpu_s":0.083,"open_files":7,"requests":7,"tools_cpu_s":0.83,"tools_run":20
+    after:  pid 41635, fds 11 threads 4 footprint 8640KB, "cpu_s":0.243,"open_files":7,"requests":308,"tools_cpu_s":0.903,"tools_run":23
+    cost:   301 requests, helper CPU 0.160 s, 3 tools started using 0.073 CPU s
+    RESULT burst PASS: 300 of 300 answered in 2 s
+2026-11-18 04:28:21  m5-macbook  stuck-tool
+    before: pid 41635, fds 11 threads 4 footprint 8640KB, "cpu_s":0.243,"open_files":7,"requests":308,"tools_cpu_s":0.903,"tools_run":23
+    after:  pid 41635, fds 11 threads 5 footprint 8656KB, "cpu_s":0.264,"open_files":7,"requests":310,"tools_cpu_s":0.978,"tools_run":26
+    cost:   2 requests, helper CPU 0.021 s, 3 tools started using 0.075 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 3044 ms, slow {"thermal":3008}; afterwards alive: yes, next status 113 ms, open files 11, tools still running 0; said: 
+2026-11-18 04:28:51  m5-macbook  flood
+    before: pid 41635, fds 11 threads 4 footprint 8672KB, "cpu_s":0.275,"open_files":7,"requests":311,"tools_cpu_s":1.048,"tools_run":29
+    after:  pid 41635, fds 11 threads 4 footprint 9216KB, "cpu_s":0.372,"open_files":7,"requests":513,"tools_cpu_s":1.11,"tools_run":32
+    cost:   202 requests, helper CPU 0.097 s, 3 tools started using 0.062 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 04:28:51  mini  burst
+    before: pid 88118, fds 11 threads 4 footprint 4721KB, "cpu_s":0.073,"open_files":7,"requests":8,"tools_cpu_s":0.685,"tools_run":14
+    after:  pid 88118, fds 11 threads 4 footprint 7953KB, "cpu_s":0.364,"open_files":8,"requests":309,"tools_cpu_s":0.739,"tools_run":16
+    cost:   301 requests, helper CPU 0.291 s, 2 tools started using 0.054 CPU s
+    RESULT burst PASS: 300 of 300 answered in 1 s
+2026-11-18 04:28:51  m1-server  burst
+    before: pid 21060, fds 11 threads 4 footprint 5425KB, "cpu_s":0.153,"open_files":7,"requests":7,"tools_cpu_s":1.229,"tools_run":15
+    after:  pid 21060, fds 11 threads 4 footprint 8609KB, "cpu_s":0.546,"open_files":7,"requests":309,"tools_cpu_s":1.317,"tools_run":17
+    cost:   302 requests, helper CPU 0.393 s, 2 tools started using 0.088 CPU s
+    RESULT burst PASS: 300 of 300 answered in 3 s
+2026-11-18 04:29:00  mini  flood
+    before: pid 88118, fds 11 threads 4 footprint 7953KB, "cpu_s":0.364,"open_files":8,"requests":309,"tools_cpu_s":0.739,"tools_run":16
+    after:  pid 88118, fds 11 threads 4 footprint 10MB, "cpu_s":0.451,"open_files":7,"requests":512,"tools_cpu_s":0.79,"tools_run":18
+    cost:   203 requests, helper CPU 0.087 s, 2 tools started using 0.051 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 04:29:05  m1-server  flood
+    before: pid 21060, fds 11 threads 4 footprint 8625KB, "cpu_s":0.546,"open_files":7,"requests":309,"tools_cpu_s":1.317,"tools_run":17
+    after:  pid 21060, fds 11 threads 4 footprint 11MB, "cpu_s":0.665,"open_files":7,"requests":511,"tools_cpu_s":1.382,"tools_run":19
+    cost:   202 requests, helper CPU 0.119 s, 2 tools started using 0.065 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 04:28:58  m5-macbook  silent
+    before: pid 41635, fds 11 threads 4 footprint 9216KB, "cpu_s":0.372,"open_files":7,"requests":513,"tools_cpu_s":1.11,"tools_run":32
+    after:  pid 41635, fds 11 threads 4 footprint 10MB, "cpu_s":0.456,"open_files":7,"requests":516,"tools_cpu_s":1.261,"tools_run":38
+    cost:   3 requests, helper CPU 0.084 s, 6 tools started using 0.151 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 04:29:29  m5-macbook  garbage
+    before: pid 41635, fds 11 threads 4 footprint 10MB, "cpu_s":0.456,"open_files":7,"requests":516,"tools_cpu_s":1.261,"tools_run":38
+    after:  pid 41635, fds 11 threads 4 footprint 10MB, "cpu_s":0.478,"open_files":7,"requests":519,"tools_cpu_s":1.33,"tools_run":41
+    cost:   3 requests, helper CPU 0.022 s, 3 tools started using 0.069 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 04:29:07  mini  silent
+    before: pid 88118, fds 11 threads 4 footprint 10MB, "cpu_s":0.451,"open_files":7,"requests":512,"tools_cpu_s":0.79,"tools_run":18
+    after:  pid 88118, fds 11 threads 4 footprint 12MB, "cpu_s":0.521,"open_files":7,"requests":515,"tools_cpu_s":0.898,"tools_run":22
+    cost:   3 requests, helper CPU 0.070 s, 4 tools started using 0.108 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 04:29:12  m1-server  silent
+    before: pid 21060, fds 11 threads 4 footprint 11MB, "cpu_s":0.665,"open_files":7,"requests":511,"tools_cpu_s":1.382,"tools_run":19
+    after:  pid 21060, fds 11 threads 4 footprint 12MB, "cpu_s":0.804,"open_files":7,"requests":514,"tools_cpu_s":1.556,"tools_run":23
+    cost:   3 requests, helper CPU 0.139 s, 4 tools started using 0.174 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 04:29:38  mini  garbage
+    before: pid 88118, fds 11 threads 4 footprint 12MB, "cpu_s":0.521,"open_files":7,"requests":515,"tools_cpu_s":0.898,"tools_run":22
+    after:  pid 88118, fds 11 threads 4 footprint 12MB, "cpu_s":0.545,"open_files":7,"requests":518,"tools_cpu_s":0.952,"tools_run":24
+    cost:   3 requests, helper CPU 0.024 s, 2 tools started using 0.054 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 04:29:43  m1-server  garbage
+    before: pid 21060, fds 11 threads 4 footprint 12MB, "cpu_s":0.804,"open_files":7,"requests":514,"tools_cpu_s":1.556,"tools_run":23
+    after:  pid 21060, fds 11 threads 4 footprint 12MB, "cpu_s":0.837,"open_files":7,"requests":517,"tools_cpu_s":1.644,"tools_run":25
+    cost:   3 requests, helper CPU 0.033 s, 2 tools started using 0.088 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 04:29:35  m5-macbook  freeze
+    before: pid 41635, fds 11 threads 4 footprint 10MB, "cpu_s":0.478,"open_files":7,"requests":519,"tools_cpu_s":1.33,"tools_run":41
+    after:  pid 41635, fds 11 threads 4 footprint 9776KB, "cpu_s":0.507,"open_files":7,"requests":529,"tools_cpu_s":1.489,"tools_run":47
+    cost:   10 requests, helper CPU 0.029 s, 6 tools started using 0.159 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 04:30:25  m5-macbook  kill
+    before: pid 41635, fds 11 threads 4 footprint 9808KB, "cpu_s":0.507,"open_files":7,"requests":529,"tools_cpu_s":1.489,"tools_run":47
+    after:  pid 46970, fds 11 threads 4 footprint 5168KB, "cpu_s":0.039,"open_files":7,"requests":2,"tools_cpu_s":0.546,"tools_run":8
+    RESULT kill PASS: answering again after 1 s as pid 46970
+2026-11-18 04:29:45  mini  freeze
+    before: pid 88118, fds 11 threads 4 footprint 12MB, "cpu_s":0.545,"open_files":7,"requests":518,"tools_cpu_s":0.952,"tools_run":24
+    after:  pid 88118, fds 11 threads 4 footprint 9345KB, "cpu_s":0.567,"open_files":7,"requests":528,"tools_cpu_s":1.058,"tools_run":28
+    cost:   10 requests, helper CPU 0.022 s, 4 tools started using 0.106 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 04:29:50  m1-server  freeze
+    before: pid 21060, fds 11 threads 4 footprint 12MB, "cpu_s":0.837,"open_files":7,"requests":517,"tools_cpu_s":1.644,"tools_run":25
+    after:  pid 21060, fds 11 threads 4 footprint 10MB, "cpu_s":0.888,"open_files":7,"requests":527,"tools_cpu_s":1.803,"tools_run":29
+    cost:   10 requests, helper CPU 0.051 s, 4 tools started using 0.159 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 04:30:35  mini  kill
+    before: pid 88118, fds 11 threads 4 footprint 9345KB, "cpu_s":0.567,"open_files":7,"requests":528,"tools_cpu_s":1.058,"tools_run":28
+    after:  pid 89474, fds 11 threads 4 footprint 4497KB, "cpu_s":0.027,"open_files":7,"requests":2,"tools_cpu_s":0.458,"tools_run":6
+    RESULT kill PASS: answering again after 1 s as pid 89474
+2026-11-18 04:30:40  m1-server  kill
+    before: pid 21060, fds 11 threads 4 footprint 10MB, "cpu_s":0.888,"open_files":7,"requests":527,"tools_cpu_s":1.803,"tools_run":29
+    after:  pid 24675, fds 11 threads 4 footprint 5473KB, "cpu_s":0.065,"open_files":7,"requests":2,"tools_cpu_s":0.857,"tools_run":7
+    RESULT kill PASS: answering again after 1 s as pid 24675
+2026-11-18 04:30:32  m5-macbook  cold
+    before: pid 46970, fds 11 threads 4 footprint 5216KB, "cpu_s":0.039,"open_files":7,"requests":2,"tools_cpu_s":0.546,"tools_run":8
+    after:  pid 47392, fds 11 threads 5 footprint 6080KB, "cpu_s":0.058,"open_files":7,"requests":61,"tools_cpu_s":0.579,"tools_run":8
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 04:31:02  m5-macbook  conflict
+    before: pid 47392, fds 11 threads 5 footprint 6080KB, "cpu_s":0.058,"open_files":7,"requests":61,"tools_cpu_s":0.579,"tools_run":8
+    after:  pid 47392, fds 11 threads 4 footprint 6368KB, "cpu_s":0.085,"open_files":7,"requests":83,"tools_cpu_s":0.659,"tools_run":11
+    cost:   22 requests, helper CPU 0.027 s, 3 tools started using 0.080 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 04:30:43  mini  cold
+    before: pid 89474, fds 11 threads 4 footprint 4545KB, "cpu_s":0.027,"open_files":7,"requests":2,"tools_cpu_s":0.458,"tools_run":6
+    after:  pid 89637, fds 11 threads 4 footprint 5201KB, "cpu_s":0.051,"open_files":7,"requests":61,"tools_cpu_s":0.498,"tools_run":6
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 04:30:48  m1-server  cold
+    before: pid 24675, fds 11 threads 4 footprint 5489KB, "cpu_s":0.065,"open_files":7,"requests":2,"tools_cpu_s":0.857,"tools_run":7
+    after:  pid 25056, fds 11 threads 4 footprint 6161KB, "cpu_s":0.083,"open_files":7,"requests":61,"tools_cpu_s":0.776,"tools_run":7
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 04:31:14  mini  conflict
+    before: pid 89637, fds 11 threads 4 footprint 5217KB, "cpu_s":0.051,"open_files":7,"requests":61,"tools_cpu_s":0.498,"tools_run":6
+    after:  pid 89637, fds 11 threads 4 footprint 5633KB, "cpu_s":0.075,"open_files":7,"requests":83,"tools_cpu_s":0.55,"tools_run":8
+    cost:   22 requests, helper CPU 0.024 s, 2 tools started using 0.052 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 04:31:18  m1-server  conflict
+    before: pid 25056, fds 11 threads 4 footprint 6161KB, "cpu_s":0.083,"open_files":7,"requests":61,"tools_cpu_s":0.776,"tools_run":7
+    after:  pid 25056, fds 11 threads 4 footprint 6673KB, "cpu_s":0.128,"open_files":7,"requests":83,"tools_cpu_s":0.863,"tools_run":9
+    cost:   22 requests, helper CPU 0.045 s, 2 tools started using 0.087 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 04:31:08  m5-macbook  hung-docker
+    before: pid 47392, fds 11 threads 4 footprint 6368KB, "cpu_s":0.085,"open_files":7,"requests":83,"tools_cpu_s":0.659,"tools_run":11
+    after:  pid 47392, fds 11 threads 4 footprint 6320KB, "cpu_s":0.111,"open_files":7,"requests":86,"tools_cpu_s":0.801,"tools_run":17
+    cost:   3 requests, helper CPU 0.026 s, 6 tools started using 0.142 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3131 3135 3135 3148 3143 3128 3134 3133 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 6225KB, cpu 0.09 s
+2026-11-18 04:31:21  mini  hung-docker
+    before: pid 89637, fds 11 threads 4 footprint 5649KB, "cpu_s":0.075,"open_files":7,"requests":83,"tools_cpu_s":0.55,"tools_run":8
+    after:  pid 89637, fds 11 threads 4 footprint 5649KB, "cpu_s":0.093,"open_files":7,"requests":86,"tools_cpu_s":0.654,"tools_run":12
+    cost:   3 requests, helper CPU 0.018 s, 4 tools started using 0.104 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3069 3063 3064 3059 3060 3061 3064 3061 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 4865KB, cpu 0.08 s
+2026-11-18 04:32:29  m5-macbook  fd-limit
+    before: pid 47392, fds 11 threads 4 footprint 6320KB, "cpu_s":0.111,"open_files":7,"requests":86,"tools_cpu_s":0.801,"tools_run":17
+    after:  pid 47392, fds 11 threads 4 footprint 6384KB, "cpu_s":0.124,"open_files":7,"requests":88,"tools_cpu_s":0.879,"tools_run":20
+    cost:   2 requests, helper CPU 0.013 s, 3 tools started using 0.078 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 120 200 ; CPU while idle afterwards 0.01 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 7489KB; said: 
+2026-11-18 04:32:42  mini  stuck-tool
+    before: pid 89637, fds 11 threads 4 footprint 5649KB, "cpu_s":0.093,"open_files":7,"requests":86,"tools_cpu_s":0.654,"tools_run":12
+    after:  pid 89637, fds 11 threads 4 footprint 5665KB, "cpu_s":0.102,"open_files":7,"requests":88,"tools_cpu_s":0.71,"tools_run":14
+    cost:   2 requests, helper CPU 0.009 s, 2 tools started using 0.056 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 27 ms, slow {}; afterwards alive: yes, next status 52 ms, open files 11, tools still running 0; said: 
+2026-11-18 04:33:01  mini  fd-limit
+    before: pid 89637, fds 11 threads 4 footprint 5665KB, "cpu_s":0.102,"open_files":7,"requests":88,"tools_cpu_s":0.71,"tools_run":14
+    after:  pid 89637, fds 11 threads 4 footprint 5665KB, "cpu_s":0.11,"open_files":7,"requests":91,"tools_cpu_s":0.76,"tools_run":16
+    cost:   3 requests, helper CPU 0.008 s, 2 tools started using 0.050 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 7 000 113 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 6033KB; said: 
+2026-11-18 04:32:56  m5-macbook  cpu-load
+    before: pid 47392, fds 11 threads 4 footprint 6384KB, "cpu_s":0.124,"open_files":7,"requests":88,"tools_cpu_s":0.879,"tools_run":20
+    after:  pid 47392, fds 11 threads 4 footprint 6417KB, "cpu_s":0.186,"open_files":7,"requests":99,"tools_cpu_s":1.509,"tools_run":44
+    cost:   11 requests, helper CPU 0.062 s, 24 tools started using 0.630 CPU s
+    RESULT cpu-load PASS: statuses with all 18 cores busy took 152 867 2193 343 1530 2785 430 1912 ms
+2026-11-18 04:33:28  mini  cpu-load
+    before: pid 89637, fds 11 threads 4 footprint 5665KB, "cpu_s":0.11,"open_files":7,"requests":91,"tools_cpu_s":0.76,"tools_run":16
+    after:  pid 89637, fds 11 threads 4 footprint 5697KB, "cpu_s":0.174,"open_files":7,"requests":102,"tools_cpu_s":1.245,"tools_run":32
+    cost:   11 requests, helper CPU 0.064 s, 16 tools started using 0.485 CPU s
+    RESULT cpu-load PASS: statuses with all 12 cores busy took 57 678 901 807 916 1507 240 835 ms
+2026-11-18 05:29:23  mini  kill
+    before: pid 91683, fds 11 threads 4 footprint 4977KB, "cpu_s":0.545,"open_files":7,"requests":56,"tools_cpu_s":3.313,"tools_run":111
+    after:  pid 95450, fds 11 threads 4 footprint 4433KB, "cpu_s":0.029,"open_files":7,"requests":2,"tools_cpu_s":0.466,"tools_run":5
+    RESULT kill PASS: answering again after 1 s as pid 95450
+2026-11-18 05:29:23  m5-macbook  burst
+    before: pid 53439, fds 11 threads 4 footprint 5649KB, "cpu_s":0.612,"open_files":7,"requests":56,"tools_cpu_s":4.765,"tools_run":166
+    after:  pid 53439, fds 11 threads 4 footprint 8689KB, "cpu_s":0.773,"open_files":7,"requests":357,"tools_cpu_s":4.83,"tools_run":169
+    cost:   301 requests, helper CPU 0.161 s, 3 tools started using 0.065 CPU s
+    RESULT burst PASS: 300 of 300 answered in 2 s
+2026-11-18 05:29:31  m5-macbook  flood
+    before: pid 53439, fds 11 threads 4 footprint 8705KB, "cpu_s":0.773,"open_files":7,"requests":357,"tools_cpu_s":4.83,"tools_run":169
+    after:  pid 53439, fds 11 threads 4 footprint 11MB, "cpu_s":0.88,"open_files":7,"requests":559,"tools_cpu_s":4.896,"tools_run":172
+    cost:   202 requests, helper CPU 0.107 s, 3 tools started using 0.066 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 05:29:37  m5-macbook  burst
+    before: pid 53439, fds 11 threads 4 footprint 11MB, "cpu_s":0.88,"open_files":7,"requests":559,"tools_cpu_s":4.896,"tools_run":172
+    after:  pid 53439, fds 11 threads 4 footprint 13MB, "cpu_s":1.119,"open_files":7,"requests":861,"tools_cpu_s":4.981,"tools_run":175
+    cost:   302 requests, helper CPU 0.239 s, 3 tools started using 0.085 CPU s
+    RESULT burst PASS: 300 of 300 answered in 1 s
+2026-11-18 05:29:46  m5-macbook  flood
+    before: pid 53439, fds 11 threads 4 footprint 13MB, "cpu_s":1.119,"open_files":7,"requests":861,"tools_cpu_s":4.981,"tools_run":175
+    after:  pid 53439, fds 11 threads 4 footprint 13MB, "cpu_s":1.235,"open_files":7,"requests":1063,"tools_cpu_s":5.065,"tools_run":178
+    cost:   202 requests, helper CPU 0.116 s, 3 tools started using 0.084 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 05:29:23  m1-server  silent
+    before: pid 28793, fds 11 threads 5 footprint 5361KB, "cpu_s":1.075,"open_files":7,"requests":56,"tools_cpu_s":4.679,"tools_run":111
+    after:  pid 28793, fds 11 threads 3 footprint 7921KB, "cpu_s":1.183,"open_files":7,"requests":58,"tools_cpu_s":4.844,"tools_run":115
+    cost:   2 requests, helper CPU 0.108 s, 4 tools started using 0.165 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 05:29:31  mini  fd-limit
+    before: pid 95450, fds 11 threads 4 footprint 4529KB, "cpu_s":0.029,"open_files":7,"requests":2,"tools_cpu_s":0.466,"tools_run":5
+    after:  pid 95450, fds 11 threads 4 footprint 4657KB, "cpu_s":0.041,"open_files":7,"requests":4,"tools_cpu_s":0.519,"tools_run":7
+    cost:   2 requests, helper CPU 0.012 s, 2 tools started using 0.053 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 2 000 118 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 5905KB; said: 
+2026-11-18 05:29:52  m5-macbook  burst
+    before: pid 53439, fds 11 threads 4 footprint 13MB, "cpu_s":1.235,"open_files":7,"requests":1063,"tools_cpu_s":5.065,"tools_run":178
+    after:  pid 53439, fds 11 threads 4 footprint 15MB, "cpu_s":1.425,"open_files":7,"requests":1365,"tools_cpu_s":5.135,"tools_run":181
+    cost:   302 requests, helper CPU 0.190 s, 3 tools started using 0.070 CPU s
+    RESULT burst PASS: 300 of 300 answered in 1 s
+2026-11-18 05:29:54  m1-server  garbage
+    before: pid 28793, fds 11 threads 4 footprint 7937KB, "cpu_s":1.183,"open_files":7,"requests":58,"tools_cpu_s":4.844,"tools_run":115
+    after:  pid 28793, fds 11 threads 4 footprint 7985KB, "cpu_s":1.225,"open_files":7,"requests":61,"tools_cpu_s":4.932,"tools_run":117
+    cost:   3 requests, helper CPU 0.042 s, 2 tools started using 0.088 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 05:30:01  m1-server  flood
+    before: pid 28793, fds 11 threads 4 footprint 7985KB, "cpu_s":1.225,"open_files":7,"requests":61,"tools_cpu_s":4.932,"tools_run":117
+    after:  pid 28793, fds 11 threads 4 footprint 9233KB, "cpu_s":1.336,"open_files":7,"requests":263,"tools_cpu_s":5.02,"tools_run":119
+    cost:   202 requests, helper CPU 0.111 s, 2 tools started using 0.088 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 05:29:58  mini  stuck-tool
+    before: pid 95450, fds 11 threads 4 footprint 4689KB, "cpu_s":0.041,"open_files":7,"requests":4,"tools_cpu_s":0.519,"tools_run":7
+    after:  pid 95450, fds 11 threads 4 footprint 4817KB, "cpu_s":0.051,"open_files":7,"requests":7,"tools_cpu_s":0.57,"tools_run":9
+    cost:   3 requests, helper CPU 0.010 s, 2 tools started using 0.051 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 3015 ms, slow {"busiest":3010}; afterwards alive: yes, next status 52 ms, open files 11, tools still running 0; said: 
+2026-11-18 05:51:47  mini  cold
+    before: pid 95450, fds 11 threads 4 footprint 4961KB, "cpu_s":0.256,"open_files":7,"requests":29,"tools_cpu_s":1.755,"tools_run":53
+    after:  pid 97889, fds 11 threads 4 footprint 5409KB, "cpu_s":0.042,"open_files":7,"requests":61,"tools_cpu_s":0.443,"tools_run":5
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 05:51:54  mini  conflict
+    before: pid 97889, fds 11 threads 4 footprint 5441KB, "cpu_s":0.042,"open_files":7,"requests":61,"tools_cpu_s":0.443,"tools_run":5
+    after:  pid 97889, fds 11 threads 4 footprint 5649KB, "cpu_s":0.073,"open_files":7,"requests":83,"tools_cpu_s":0.497,"tools_run":7
+    cost:   22 requests, helper CPU 0.031 s, 2 tools started using 0.054 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 05:51:47  m5-macbook  silent
+    before: pid 53439, fds 11 threads 4 footprint 8401KB, "cpu_s":2.812,"open_files":7,"requests":3188,"tools_cpu_s":7.214,"tools_run":262
+    after:  pid 53439, fds 11 threads 4 footprint 8929KB, "cpu_s":2.891,"open_files":7,"requests":3191,"tools_cpu_s":7.42,"tools_run":271
+    cost:   3 requests, helper CPU 0.079 s, 9 tools started using 0.206 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 05:51:47  m1-server  freeze
+    before: pid 28793, fds 11 threads 4 footprint 8257KB, "cpu_s":1.831,"open_files":7,"requests":286,"tools_cpu_s":6.767,"tools_run":163
+    after:  pid 28793, fds 11 threads 4 footprint 8257KB, "cpu_s":1.894,"open_files":7,"requests":295,"tools_cpu_s":6.977,"tools_run":169
+    cost:   9 requests, helper CPU 0.063 s, 6 tools started using 0.210 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 05:52:38  m1-server  kill
+    before: pid 28793, fds 11 threads 4 footprint 8257KB, "cpu_s":1.894,"open_files":7,"requests":295,"tools_cpu_s":6.977,"tools_run":169
+    after:  pid 57142, fds 11 threads 4 footprint 5121KB, "cpu_s":0.074,"open_files":7,"requests":2,"tools_cpu_s":0.818,"tools_run":5
+    RESULT kill PASS: answering again after 1 s as pid 57142
+2026-11-18 05:52:46  m1-server  cold
+    before: pid 57142, fds 11 threads 4 footprint 5121KB, "cpu_s":0.074,"open_files":7,"requests":2,"tools_cpu_s":0.818,"tools_run":5
+    after:  pid 57340, fds 11 threads 4 footprint 6129KB, "cpu_s":0.087,"open_files":7,"requests":61,"tools_cpu_s":0.738,"tools_run":5
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 05:52:02  mini  hung-docker
+    before: pid 97889, fds 11 threads 4 footprint 5681KB, "cpu_s":0.073,"open_files":7,"requests":83,"tools_cpu_s":0.497,"tools_run":7
+    after:  pid 97889, fds 11 threads 4 footprint 5745KB, "cpu_s":0.099,"open_files":7,"requests":87,"tools_cpu_s":0.606,"tools_run":11
+    cost:   4 requests, helper CPU 0.026 s, 4 tools started using 0.109 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3074 3059 3064 3067 3066 3067 3067 3068 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 4913KB, cpu 0.1 s
+2026-11-18 05:52:18  m5-macbook  hung-docker
+    before: pid 53439, fds 11 threads 4 footprint 8929KB, "cpu_s":2.891,"open_files":7,"requests":3191,"tools_cpu_s":7.42,"tools_run":271
+    after:  pid 53439, fds 11 threads 4 footprint 8849KB, "cpu_s":2.916,"open_files":7,"requests":3194,"tools_cpu_s":7.564,"tools_run":277
+    cost:   3 requests, helper CPU 0.025 s, 6 tools started using 0.144 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3153 3139 3151 3130 3140 3122 3122 3148 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 5985KB, cpu 0.1 s
+2026-11-18 05:53:23  mini  cpu-load
+    before: pid 97889, fds 11 threads 4 footprint 5777KB, "cpu_s":0.099,"open_files":7,"requests":87,"tools_cpu_s":0.606,"tools_run":11
+    after:  pid 97889, fds 11 threads 4 footprint 5857KB, "cpu_s":0.162,"open_files":7,"requests":98,"tools_cpu_s":1.046,"tools_run":27
+    cost:   11 requests, helper CPU 0.063 s, 16 tools started using 0.440 CPU s
+    RESULT cpu-load PASS: statuses with all 12 cores busy took 64 755 621 895 604 396 915 250 ms
+2026-11-18 05:53:39  m5-macbook  cpu-load
+    before: pid 53439, fds 11 threads 4 footprint 8881KB, "cpu_s":2.916,"open_files":7,"requests":3194,"tools_cpu_s":7.564,"tools_run":277
+    after:  pid 53439, fds 11 threads 4 footprint 8817KB, "cpu_s":2.977,"open_files":7,"requests":3205,"tools_cpu_s":8.188,"tools_run":301
+    cost:   11 requests, helper CPU 0.061 s, 24 tools started using 0.624 CPU s
+    RESULT cpu-load PASS: statuses with all 18 cores busy took 158 200 2159 2457 1577 970 482 2854 ms
+2026-11-18 05:54:41  m5-macbook  garbage
+    before: pid 53439, fds 11 threads 4 footprint 8817KB, "cpu_s":2.977,"open_files":7,"requests":3205,"tools_cpu_s":8.188,"tools_run":301
+    after:  pid 53439, fds 11 threads 4 footprint 8849KB, "cpu_s":2.998,"open_files":7,"requests":3208,"tools_cpu_s":8.257,"tools_run":304
+    cost:   3 requests, helper CPU 0.021 s, 3 tools started using 0.069 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 06:19:00  mini  flood
+    before: pid 97889, fds 11 threads 4 footprint 5857KB, "cpu_s":0.398,"open_files":7,"requests":123,"tools_cpu_s":2.395,"tools_run":77
+    after:  pid 97889, fds 11 threads 4 footprint 7617KB, "cpu_s":0.476,"open_files":7,"requests":324,"tools_cpu_s":2.448,"tools_run":79
+    cost:   201 requests, helper CPU 0.078 s, 2 tools started using 0.053 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 06:19:07  mini  silent
+    before: pid 97889, fds 11 threads 4 footprint 7617KB, "cpu_s":0.476,"open_files":7,"requests":324,"tools_cpu_s":2.448,"tools_run":79
+    after:  pid 97889, fds 11 threads 4 footprint 9633KB, "cpu_s":0.567,"open_files":7,"requests":328,"tools_cpu_s":2.56,"tools_run":83
+    cost:   4 requests, helper CPU 0.091 s, 4 tools started using 0.112 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 06:53:36  m5-macbook  stuck-tool
+    before: pid 53439, fds 11 threads 4 footprint 8513KB, "cpu_s":3.654,"open_files":7,"requests":3268,"tools_cpu_s":13.119,"tools_run":484
+    after:  pid 53439, fds 11 threads 4 footprint 8497KB, "cpu_s":3.665,"open_files":7,"requests":3269,"tools_cpu_s":13.206,"tools_run":487
+    cost:   1 requests, helper CPU 0.011 s, 3 tools started using 0.087 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 4549 ms, slow {"busiest":3010,"thermal":1531}; afterwards alive: yes, next status 136 ms, open files 11, tools still running 0; said: 
+2026-11-18 06:54:00  m5-macbook  fd-limit
+    before: pid 53439, fds 11 threads 4 footprint 8529KB, "cpu_s":3.665,"open_files":7,"requests":3269,"tools_cpu_s":13.206,"tools_run":487
+    after:  pid 53439, fds 11 threads 4 footprint 8529KB, "cpu_s":3.676,"open_files":7,"requests":3271,"tools_cpu_s":13.276,"tools_run":490
+    cost:   2 requests, helper CPU 0.011 s, 3 tools started using 0.070 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 120 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 7585KB; said: 
+2026-11-18 07:26:51  m5-macbook  cold
+    before: pid 53439, fds 11 threads 4 footprint 8497KB, "cpu_s":4.033,"open_files":7,"requests":3305,"tools_cpu_s":15.975,"tools_run":589
+    after:  pid 50581, fds 11 threads 4 footprint 6080KB, "cpu_s":0.049,"open_files":7,"requests":61,"tools_cpu_s":0.593,"tools_run":7
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 07:26:58  m5-macbook  cold
+    before: pid 50581, fds 11 threads 4 footprint 6080KB, "cpu_s":0.049,"open_files":7,"requests":61,"tools_cpu_s":0.593,"tools_run":7
+    after:  pid 51484, fds 11 threads 4 footprint 6112KB, "cpu_s":0.058,"open_files":7,"requests":61,"tools_cpu_s":0.561,"tools_run":7
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 07:50:04  m1-server  burst
+    before: pid 57340, fds 11 threads 3 footprint 6145KB, "cpu_s":2.438,"open_files":7,"requests":179,"tools_cpu_s":9.737,"tools_run":239
+    after:  pid 57340, fds 11 threads 4 footprint 8721KB, "cpu_s":2.823,"open_files":7,"requests":480,"tools_cpu_s":9.815,"tools_run":241
+    cost:   301 requests, helper CPU 0.385 s, 2 tools started using 0.078 CPU s
+    RESULT burst PASS: 300 of 300 answered in 3 s
+2026-11-18 07:50:14  m1-server  flood
+    before: pid 57340, fds 11 threads 4 footprint 8753KB, "cpu_s":2.823,"open_files":7,"requests":480,"tools_cpu_s":9.815,"tools_run":241
+    after:  pid 57340, fds 11 threads 4 footprint 11MB, "cpu_s":2.944,"open_files":7,"requests":682,"tools_cpu_s":9.89,"tools_run":243
+    cost:   202 requests, helper CPU 0.121 s, 2 tools started using 0.075 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 08:17:54  mini  cpu-load
+    before: pid 97889, fds 11 threads 4 footprint 7937KB, "cpu_s":1.685,"open_files":7,"requests":447,"tools_cpu_s":8.922,"tools_run":321
+    after:  pid 97889, fds 11 threads 4 footprint 7937KB, "cpu_s":1.75,"open_files":7,"requests":457,"tools_cpu_s":9.427,"tools_run":337
+    cost:   10 requests, helper CPU 0.065 s, 16 tools started using 0.505 CPU s
+    RESULT cpu-load PASS: statuses with all 12 cores busy took 63 835 960 471 688 518 1065 903 ms
+2026-11-18 08:18:52  mini  silent
+    before: pid 97889, fds 11 threads 4 footprint 7937KB, "cpu_s":1.75,"open_files":7,"requests":457,"tools_cpu_s":9.427,"tools_run":337
+    after:  pid 97889, fds 11 threads 4 footprint 8449KB, "cpu_s":1.833,"open_files":7,"requests":460,"tools_cpu_s":9.537,"tools_run":341
+    cost:   3 requests, helper CPU 0.083 s, 4 tools started using 0.110 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 08:40:55  m5-macbook  stuck-tool
+    before: pid 51484, fds 11 threads 4 footprint 6208KB, "cpu_s":0.852,"open_files":7,"requests":135,"tools_cpu_s":6.626,"tools_run":229
+    after:  pid 51484, fds 11 threads 4 footprint 6224KB, "cpu_s":0.865,"open_files":7,"requests":137,"tools_cpu_s":6.71,"tools_run":232
+    cost:   2 requests, helper CPU 0.013 s, 3 tools started using 0.084 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 4481 ms, slow {"busiest":3010,"thermal":1462}; afterwards alive: yes, next status 138 ms, open files 11, tools still running 0; said: 
+2026-11-18 08:41:19  m5-macbook  fd-limit
+    before: pid 51484, fds 11 threads 4 footprint 6224KB, "cpu_s":0.865,"open_files":7,"requests":137,"tools_cpu_s":6.71,"tools_run":232
+    after:  pid 51484, fds 11 threads 4 footprint 6240KB, "cpu_s":0.877,"open_files":7,"requests":139,"tools_cpu_s":6.798,"tools_run":235
+    cost:   2 requests, helper CPU 0.012 s, 3 tools started using 0.088 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 120 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 7489KB; said: 
+2026-11-18 09:07:31  m1-server  cold
+    before: pid 57340, fds 11 threads 4 footprint 8417KB, "cpu_s":4.596,"open_files":7,"requests":760,"tools_cpu_s":16.036,"tools_run":399
+    after:  pid 10585, fds 11 threads 4 footprint 6257KB, "cpu_s":0.07,"open_files":7,"requests":61,"tools_cpu_s":0.788,"tools_run":5
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 09:07:39  m1-server  freeze
+    before: pid 10585, fds 11 threads 4 footprint 6257KB, "cpu_s":0.07,"open_files":7,"requests":61,"tools_cpu_s":0.788,"tools_run":5
+    after:  pid 10585, fds 11 threads 4 footprint 6385KB, "cpu_s":0.116,"open_files":7,"requests":70,"tools_cpu_s":0.93,"tools_run":9
+    cost:   9 requests, helper CPU 0.046 s, 4 tools started using 0.142 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 10:08:42  m5-macbook  burst
+    before: pid 51484, fds 11 threads 4 footprint 6224KB, "cpu_s":1.779,"open_files":7,"requests":223,"tools_cpu_s":13.631,"tools_run":487
+    after:  pid 51484, fds 11 threads 4 footprint 8800KB, "cpu_s":1.963,"open_files":7,"requests":524,"tools_cpu_s":13.717,"tools_run":490
+    cost:   301 requests, helper CPU 0.184 s, 3 tools started using 0.086 CPU s
+    RESULT burst PASS: 300 of 300 answered in 1 s
+2026-11-18 10:08:42  mini  burst
+    before: pid 97889, fds 11 threads 4 footprint 8161KB, "cpu_s":2.808,"open_files":7,"requests":566,"tools_cpu_s":15.294,"tools_run":553
+    after:  pid 97889, fds 11 threads 4 footprint 9169KB, "cpu_s":3.094,"open_files":7,"requests":867,"tools_cpu_s":15.35,"tools_run":555
+    cost:   301 requests, helper CPU 0.286 s, 2 tools started using 0.056 CPU s
+    RESULT burst PASS: 300 of 300 answered in 1 s
+2026-11-18 10:08:42  m1-server  burst
+    before: pid 10585, fds 11 threads 4 footprint 6257KB, "cpu_s":1.226,"open_files":7,"requests":129,"tools_cpu_s":5.449,"tools_run":123
+    after:  pid 10585, fds 11 threads 4 footprint 8721KB, "cpu_s":1.596,"open_files":7,"requests":430,"tools_cpu_s":5.527,"tools_run":125
+    cost:   301 requests, helper CPU 0.370 s, 2 tools started using 0.078 CPU s
+    RESULT burst PASS: 300 of 300 answered in 2 s
+2026-11-18 10:08:50  m5-macbook  flood
+    before: pid 51484, fds 11 threads 4 footprint 8816KB, "cpu_s":1.963,"open_files":7,"requests":524,"tools_cpu_s":13.717,"tools_run":490
+    after:  pid 51484, fds 11 threads 4 footprint 11MB, "cpu_s":2.072,"open_files":7,"requests":726,"tools_cpu_s":13.78,"tools_run":493
+    cost:   202 requests, helper CPU 0.109 s, 3 tools started using 0.063 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 10:08:51  mini  flood
+    before: pid 97889, fds 11 threads 4 footprint 9233KB, "cpu_s":3.094,"open_files":7,"requests":867,"tools_cpu_s":15.35,"tools_run":555
+    after:  pid 97889, fds 11 threads 4 footprint 11MB, "cpu_s":3.188,"open_files":7,"requests":1069,"tools_cpu_s":15.404,"tools_run":557
+    cost:   202 requests, helper CPU 0.094 s, 2 tools started using 0.054 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 10:08:52  m1-server  flood
+    before: pid 10585, fds 11 threads 4 footprint 8753KB, "cpu_s":1.596,"open_files":7,"requests":430,"tools_cpu_s":5.527,"tools_run":125
+    after:  pid 10585, fds 11 threads 3 footprint 11MB, "cpu_s":1.718,"open_files":7,"requests":632,"tools_cpu_s":5.596,"tools_run":127
+    cost:   202 requests, helper CPU 0.122 s, 2 tools started using 0.069 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 10:08:59  m1-server  silent
+    before: pid 10585, fds 11 threads 4 footprint 11MB, "cpu_s":1.718,"open_files":7,"requests":632,"tools_cpu_s":5.596,"tools_run":127
+    Traceback (most recent call last):
+      File "<string>", line 3, in <module>
+      File "<string>", line 3, in <listcomp>
+      File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/socket.py", line 843, in create_connection
+        raise err
+      File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/socket.py", line 831, in create_connection
+        sock.connect(sa)
+    ConnectionResetError: [Errno 54] Connection reset by peer
+    after:  pid 10585, fds 11 threads 4 footprint 12MB, "cpu_s":1.816,"open_files":7,"requests":635,"tools_cpu_s":5.676,"tools_run":129
+    cost:   3 requests, helper CPU 0.098 s, 2 tools started using 0.080 CPU s
+    RESULT silent FAIL:  of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 10:09:06  m1-server  garbage
+    before: pid 10585, fds 11 threads 4 footprint 12MB, "cpu_s":1.816,"open_files":7,"requests":635,"tools_cpu_s":5.676,"tools_run":129
+    after:  pid 10585, fds 11 threads 4 footprint 12MB, "cpu_s":1.864,"open_files":7,"requests":638,"tools_cpu_s":5.758,"tools_run":131
+    cost:   3 requests, helper CPU 0.048 s, 2 tools started using 0.082 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 10:08:57  m5-macbook  silent
+    before: pid 51484, fds 11 threads 4 footprint 11MB, "cpu_s":2.072,"open_files":7,"requests":726,"tools_cpu_s":13.78,"tools_run":493
+    after:  pid 51484, fds 11 threads 4 footprint 12MB, "cpu_s":2.158,"open_files":7,"requests":729,"tools_cpu_s":13.95,"tools_run":499
+    cost:   3 requests, helper CPU 0.086 s, 6 tools started using 0.170 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 10:08:58  mini  silent
+    before: pid 97889, fds 11 threads 4 footprint 11MB, "cpu_s":3.188,"open_files":7,"requests":1069,"tools_cpu_s":15.404,"tools_run":557
+    after:  pid 97889, fds 11 threads 4 footprint 12MB, "cpu_s":3.29,"open_files":7,"requests":1072,"tools_cpu_s":15.515,"tools_run":561
+    cost:   3 requests, helper CPU 0.102 s, 4 tools started using 0.111 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper; still answering: yes
+2026-11-18 10:09:28  m5-macbook  garbage
+    before: pid 51484, fds 11 threads 4 footprint 12MB, "cpu_s":2.158,"open_files":7,"requests":729,"tools_cpu_s":13.95,"tools_run":499
+    after:  pid 51484, fds 11 threads 4 footprint 12MB, "cpu_s":2.182,"open_files":7,"requests":732,"tools_cpu_s":14.039,"tools_run":502
+    cost:   3 requests, helper CPU 0.024 s, 3 tools started using 0.089 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 10:09:29  mini  garbage
+    before: pid 97889, fds 11 threads 4 footprint 12MB, "cpu_s":3.29,"open_files":7,"requests":1072,"tools_cpu_s":15.515,"tools_run":561
+    after:  pid 97889, fds 11 threads 4 footprint 12MB, "cpu_s":3.314,"open_files":7,"requests":1075,"tools_cpu_s":15.57,"tools_run":563
+    cost:   3 requests, helper CPU 0.024 s, 2 tools started using 0.055 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 10:09:13  m1-server  freeze
+    before: pid 10585, fds 11 threads 4 footprint 12MB, "cpu_s":1.864,"open_files":7,"requests":638,"tools_cpu_s":5.758,"tools_run":131
+    after:  pid 10585, fds 11 threads 4 footprint 9441KB, "cpu_s":1.917,"open_files":7,"requests":647,"tools_cpu_s":5.901,"tools_run":135
+    cost:   9 requests, helper CPU 0.053 s, 4 tools started using 0.143 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 10:10:04  m1-server  kill
+    before: pid 10585, fds 11 threads 4 footprint 9441KB, "cpu_s":1.917,"open_files":7,"requests":647,"tools_cpu_s":5.901,"tools_run":135
+    after:  pid 28092, fds 11 threads 4 footprint 5073KB, "cpu_s":0.068,"open_files":7,"requests":2,"tools_cpu_s":0.724,"tools_run":5
+    RESULT kill PASS: answering again after 1 s as pid 28092
+2026-11-18 10:09:34  m5-macbook  freeze
+    before: pid 51484, fds 11 threads 4 footprint 12MB, "cpu_s":2.182,"open_files":7,"requests":732,"tools_cpu_s":14.039,"tools_run":502
+    after:  pid 51484, fds 11 threads 4 footprint 11MB, "cpu_s":2.207,"open_files":7,"requests":741,"tools_cpu_s":14.209,"tools_run":508
+    cost:   9 requests, helper CPU 0.025 s, 6 tools started using 0.170 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 10:09:36  mini  freeze
+    before: pid 97889, fds 11 threads 4 footprint 12MB, "cpu_s":3.314,"open_files":7,"requests":1075,"tools_cpu_s":15.57,"tools_run":563
+    after:  pid 97889, fds 11 threads 4 footprint 10MB, "cpu_s":3.34,"open_files":7,"requests":1084,"tools_cpu_s":15.678,"tools_run":567
+    cost:   9 requests, helper CPU 0.026 s, 4 tools started using 0.108 CPU s
+    RESULT freeze PASS: 6 of 6 requests timed out while frozen; answering 1 s after resuming: yes; open files afterwards 11
+2026-11-18 10:10:24  m5-macbook  kill
+    before: pid 51484, fds 11 threads 4 footprint 11MB, "cpu_s":2.207,"open_files":7,"requests":741,"tools_cpu_s":14.209,"tools_run":508
+    after:  pid 41142, fds 11 threads 4 footprint 5136KB, "cpu_s":0.036,"open_files":7,"requests":2,"tools_cpu_s":0.626,"tools_run":7
+    RESULT kill PASS: answering again after 1 s as pid 41142
+2026-11-18 10:10:26  mini  kill
+    before: pid 97889, fds 11 threads 4 footprint 10MB, "cpu_s":3.34,"open_files":7,"requests":1084,"tools_cpu_s":15.678,"tools_run":567
+    after:  pid 18106, fds 11 threads 4 footprint 4465KB, "cpu_s":0.045,"open_files":7,"requests":2,"tools_cpu_s":0.469,"tools_run":5
+    RESULT kill PASS: answering again after 1 s as pid 18106
+2026-11-18 10:10:12  m1-server  cold
+    before: pid 28092, fds 11 threads 4 footprint 5105KB, "cpu_s":0.068,"open_files":7,"requests":2,"tools_cpu_s":0.724,"tools_run":5
+    after:  pid 28291, fds 11 threads 4 footprint 6161KB, "cpu_s":0.092,"open_files":7,"requests":61,"tools_cpu_s":0.722,"tools_run":5
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 10:10:42  m1-server  conflict
+    before: pid 28291, fds 11 threads 4 footprint 6161KB, "cpu_s":0.092,"open_files":7,"requests":61,"tools_cpu_s":0.722,"tools_run":5
+    after:  pid 28291, fds 11 threads 4 footprint 6385KB, "cpu_s":0.153,"open_files":7,"requests":83,"tools_cpu_s":0.791,"tools_run":7
+    cost:   22 requests, helper CPU 0.061 s, 2 tools started using 0.069 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 10:10:31  m5-macbook  cold
+    before: pid 41142, fds 11 threads 4 footprint 5184KB, "cpu_s":0.036,"open_files":7,"requests":2,"tools_cpu_s":0.626,"tools_run":7
+    after:  pid 41543, fds 11 threads 4 footprint 6049KB, "cpu_s":0.058,"open_files":7,"requests":61,"tools_cpu_s":0.571,"tools_run":7
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 10:10:33  mini  cold
+    before: pid 18106, fds 11 threads 4 footprint 4529KB, "cpu_s":0.045,"open_files":7,"requests":2,"tools_cpu_s":0.469,"tools_run":5
+    after:  pid 18299, fds 11 threads 4 footprint 5329KB, "cpu_s":0.06,"open_files":7,"requests":61,"tools_cpu_s":0.467,"tools_run":5
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 10:11:01  m5-macbook  conflict
+    before: pid 41543, fds 11 threads 4 footprint 6049KB, "cpu_s":0.058,"open_files":7,"requests":61,"tools_cpu_s":0.571,"tools_run":7
+    after:  pid 41543, fds 11 threads 4 footprint 6337KB, "cpu_s":0.081,"open_files":7,"requests":83,"tools_cpu_s":0.637,"tools_run":10
+    cost:   22 requests, helper CPU 0.023 s, 3 tools started using 0.066 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 10:11:04  mini  conflict
+    before: pid 18299, fds 11 threads 4 footprint 5345KB, "cpu_s":0.06,"open_files":7,"requests":61,"tools_cpu_s":0.467,"tools_run":5
+    after:  pid 18299, fds 11 threads 4 footprint 5649KB, "cpu_s":0.094,"open_files":7,"requests":83,"tools_cpu_s":0.521,"tools_run":7
+    cost:   22 requests, helper CPU 0.034 s, 2 tools started using 0.054 CPU s
+    RESULT conflict PASS: second copy gave up: fleetd: cannot listen on 127.0.0.1:4790: POSIXErrorCode(rawValue: 48): Address already in use ; first copy answered 20 of 20
+2026-11-18 10:11:08  m5-macbook  hung-docker
+    before: pid 41543, fds 11 threads 4 footprint 6353KB, "cpu_s":0.081,"open_files":7,"requests":83,"tools_cpu_s":0.637,"tools_run":10
+    after:  pid 41543, fds 11 threads 4 footprint 6304KB, "cpu_s":0.095,"open_files":7,"requests":85,"tools_cpu_s":0.721,"tools_run":13
+    cost:   2 requests, helper CPU 0.014 s, 3 tools started using 0.084 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3154 3153 3153 3139 3153 3149 3134 3150 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 6097KB, cpu 0.1 s
+2026-11-18 10:11:12  mini  hung-docker
+    before: pid 18299, fds 11 threads 4 footprint 5665KB, "cpu_s":0.094,"open_files":7,"requests":83,"tools_cpu_s":0.521,"tools_run":7
+    after:  pid 18299, fds 11 threads 4 footprint 5697KB, "cpu_s":0.108,"open_files":7,"requests":85,"tools_cpu_s":0.577,"tools_run":9
+    cost:   2 requests, helper CPU 0.014 s, 2 tools started using 0.056 CPU s
+    RESULT hung-docker PASS: 8 statuses took 3052 3068 3067 3070 3067 3071 3067 3066 ms; containers reported {"error":"no answer within 3 s","state":"unknown"}; test copy ended with fds 11 threads 4 footprint 4945KB, cpu 0.1 s
+2026-11-18 10:12:29  m5-macbook  stuck-tool
+    before: pid 41543, fds 11 threads 4 footprint 6304KB, "cpu_s":0.095,"open_files":7,"requests":85,"tools_cpu_s":0.721,"tools_run":13
+    after:  pid 41543, fds 11 threads 4 footprint 6272KB, "cpu_s":0.105,"open_files":7,"requests":87,"tools_cpu_s":0.806,"tools_run":16
+    cost:   2 requests, helper CPU 0.010 s, 3 tools started using 0.085 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 4704 ms, slow {"busiest":3010,"thermal":1685}; afterwards alive: yes, next status 132 ms, open files 11, tools still running 0; said: 
+2026-11-18 10:12:32  mini  stuck-tool
+    before: pid 18299, fds 11 threads 4 footprint 5697KB, "cpu_s":0.108,"open_files":7,"requests":85,"tools_cpu_s":0.577,"tools_run":9
+    after:  pid 18299, fds 11 threads 4 footprint 5729KB, "cpu_s":0.119,"open_files":7,"requests":87,"tools_cpu_s":0.631,"tools_run":11
+    cost:   2 requests, helper CPU 0.011 s, 2 tools started using 0.054 CPU s
+    RESULT stuck-tool PASS: status while tools were frozen: took 3018 ms, slow {"busiest":3010}; afterwards alive: yes, next status 50 ms, open files 11, tools still running 0; said: 
+2026-11-18 10:12:52  m5-macbook  fd-limit
+    before: pid 41543, fds 11 threads 4 footprint 6272KB, "cpu_s":0.105,"open_files":7,"requests":87,"tools_cpu_s":0.806,"tools_run":16
+    after:  pid 41543, fds 11 threads 4 footprint 6336KB, "cpu_s":0.117,"open_files":7,"requests":89,"tools_cpu_s":0.891,"tools_run":19
+    cost:   2 requests, helper CPU 0.012 s, 3 tools started using 0.085 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 120 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 7441KB; said: 
+2026-11-18 10:12:55  mini  fd-limit
+    before: pid 18299, fds 11 threads 4 footprint 5729KB, "cpu_s":0.119,"open_files":7,"requests":87,"tools_cpu_s":0.631,"tools_run":11
+    after:  pid 18299, fds 11 threads 4 footprint 5729KB, "cpu_s":0.13,"open_files":7,"requests":89,"tools_cpu_s":0.687,"tools_run":13
+    cost:   2 requests, helper CPU 0.011 s, 2 tools started using 0.056 CPU s
+    RESULT fd-limit PASS: codes under flood (count code): 120 200 ; CPU while idle afterwards 0.00 s in 12 s; alive: yes; answers: yes; fds 11 threads 4 footprint 5985KB; said: 
+2026-11-18 10:13:22  mini  cpu-load
+    before: pid 18299, fds 11 threads 4 footprint 5745KB, "cpu_s":0.13,"open_files":7,"requests":89,"tools_cpu_s":0.687,"tools_run":13
+    after:  pid 18299, fds 11 threads 4 footprint 5761KB, "cpu_s":0.188,"open_files":7,"requests":99,"tools_cpu_s":1.147,"tools_run":29
+    cost:   10 requests, helper CPU 0.058 s, 16 tools started using 0.460 CPU s
+    RESULT cpu-load PASS: statuses with all 12 cores busy took 65 1006 363 192 623 523 672 654 ms
+2026-11-18 10:13:19  m5-macbook  cpu-load
+    before: pid 41543, fds 11 threads 4 footprint 6336KB, "cpu_s":0.117,"open_files":7,"requests":89,"tools_cpu_s":0.891,"tools_run":19
+    after:  pid 41543, fds 11 threads 4 footprint 6433KB, "cpu_s":0.18,"open_files":7,"requests":99,"tools_cpu_s":1.535,"tools_run":43
+    cost:   10 requests, helper CPU 0.063 s, 24 tools started using 0.644 CPU s
+    RESULT cpu-load PASS: statuses with all 18 cores busy took 160 743 650 400 5264 1436 2116 301 ms
+2026-11-18 10:14:44  m1-server  silent
+    before: pid 28291, fds 11 threads 4 footprint 6465KB, "cpu_s":0.197,"open_files":7,"requests":85,"tools_cpu_s":0.959,"tools_run":11
+    after:  pid 28291, fds 11 threads 4 footprint 8193KB, "cpu_s":0.315,"open_files":7,"requests":87,"tools_cpu_s":1.124,"tools_run":15
+    cost:   2 requests, helper CPU 0.118 s, 4 tools started using 0.165 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper, 0 refused on arrival; still answering: yes
+2026-11-18 10:15:16  m1-server  silent
+    before: pid 28291, fds 11 threads 4 footprint 8193KB, "cpu_s":0.315,"open_files":7,"requests":87,"tools_cpu_s":1.124,"tools_run":15
+    after:  pid 28291, fds 11 threads 3 footprint 9153KB, "cpu_s":0.448,"open_files":7,"requests":90,"tools_cpu_s":1.277,"tools_run":19
+    cost:   3 requests, helper CPU 0.133 s, 4 tools started using 0.153 CPU s
+    RESULT silent PASS: 149 of 149 silent connections dropped by the helper, 1 refused on arrival; still answering: yes
+2026-11-18 10:15:47  m1-server  silent
+    before: pid 28291, fds 11 threads 3 footprint 9153KB, "cpu_s":0.448,"open_files":7,"requests":90,"tools_cpu_s":1.277,"tools_run":19
+    after:  pid 28291, fds 11 threads 4 footprint 9281KB, "cpu_s":0.596,"open_files":7,"requests":93,"tools_cpu_s":1.44,"tools_run":23
+    cost:   3 requests, helper CPU 0.148 s, 4 tools started using 0.163 CPU s
+    RESULT silent PASS: 150 of 150 silent connections dropped by the helper, 0 refused on arrival; still answering: yes
+2026-11-18 14:46:27  m5-macbook  burst
+    before: pid 71321, fds 13 threads 4 footprint 5889KB, "cpu_s":0.419,"open_files":7,"requests":26,"tools_cpu_s":2.391,"tools_run":61
+    after:  pid 71321, fds 13 threads 4 footprint 9041KB, "cpu_s":0.69,"open_files":7,"requests":327,"tools_cpu_s":2.486,"tools_run":64
+    cost:   301 requests, helper CPU 0.271 s, 3 tools started using 0.095 CPU s
+    RESULT burst PASS: 300 of 300 answered in 2 s
+2026-11-18 14:46:36  m5-macbook  flood
+    before: pid 71321, fds 13 threads 4 footprint 9057KB, "cpu_s":0.69,"open_files":7,"requests":327,"tools_cpu_s":2.486,"tools_run":64
+    after:  pid 71321, fds 13 threads 4 footprint 11MB, "cpu_s":0.819,"open_files":7,"requests":529,"tools_cpu_s":2.583,"tools_run":67
+    cost:   202 requests, helper CPU 0.129 s, 3 tools started using 0.097 CPU s
+    RESULT flood PASS: status codes (count code): 200 200 
+2026-11-18 14:46:43  m5-macbook  garbage
+    before: pid 71321, fds 13 threads 4 footprint 11MB, "cpu_s":0.819,"open_files":7,"requests":529,"tools_cpu_s":2.583,"tools_run":67
+    after:  pid 71321, fds 13 threads 4 footprint 11MB, "cpu_s":0.85,"open_files":7,"requests":532,"tools_cpu_s":2.671,"tools_run":70
+    cost:   3 requests, helper CPU 0.031 s, 3 tools started using 0.088 CPU s
+    RESULT garbage PASS: bad requests answered with a status: none; still answering: yes
+2026-11-18 14:46:49  m5-macbook  kill
+    before: pid 71321, fds 13 threads 4 footprint 11MB, "cpu_s":0.85,"open_files":7,"requests":532,"tools_cpu_s":2.671,"tools_run":70
+    after:  pid 86065, fds 13 threads 4 footprint 5488KB, "cpu_s":0.058,"open_files":7,"requests":2,"tools_cpu_s":0.71,"tools_run":7
+    RESULT kill PASS: answering again after 1 s as pid 86065
+2026-11-18 14:46:57  m5-macbook  cold
+    before: pid 86065, fds 13 threads 4 footprint 5488KB, "cpu_s":0.058,"open_files":7,"requests":2,"tools_cpu_s":0.71,"tools_run":7
+    after:  pid 86492, fds 13 threads 4 footprint 6400KB, "cpu_s":0.088,"open_files":7,"requests":61,"tools_cpu_s":0.875,"tools_run":7
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 15:13:46  m5-macbook  kill
+    before: pid 93986, fds 13 threads 4 footprint 5936KB, "cpu_s":0.206,"open_files":7,"requests":13,"tools_cpu_s":1.47,"tools_run":35
+    after:  pid 98631, fds 13 threads 4 footprint 5616KB, "cpu_s":0.058,"open_files":7,"requests":2,"tools_cpu_s":0.711,"tools_run":9
+    RESULT kill PASS: answering again after 1 s as pid 98631
+2026-11-18 15:13:54  m5-macbook  cold
+    before: pid 98631, fds 13 threads 4 footprint 5616KB, "cpu_s":0.058,"open_files":7,"requests":2,"tools_cpu_s":0.711,"tools_run":9
+    after:  pid 99011, fds 13 threads 4 footprint 6512KB, "cpu_s":0.077,"open_files":7,"requests":61,"tools_cpu_s":0.745,"tools_run":9
+    RESULT cold PASS: status codes right after a restart (count code): 60 200 
+2026-11-18 15:14:24  m5-macbook  burst
+    before: pid 99011, fds 13 threads 4 footprint 6528KB, "cpu_s":0.077,"open_files":7,"requests":61,"tools_cpu_s":0.745,"tools_run":9
+    after:  pid 99011, fds 13 threads 4 footprint 9776KB, "cpu_s":0.336,"open_files":7,"requests":363,"tools_cpu_s":0.862,"tools_run":13
+    cost:   302 requests, helper CPU 0.259 s, 4 tools started using 0.117 CPU s
+    RESULT burst PASS: 300 of 300 answered in 2 s

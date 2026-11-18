@@ -1,0 +1,53 @@
+# Fleet.xcodeproj is made from this file by xcodegen (build.sh and release.sh do it) and is not kept in git.
+name: Fleet
+options:
+  deploymentTarget:
+    macOS: "15.0"
+settings:
+  base:
+    # The release's version. release.sh tags it, the cask installs it and fleetd reports it as "build".
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    ARCHS: arm64
+    DEVELOPMENT_TEAM: P48VDW72LU
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: Apple Development
+    ENABLE_HARDENED_RUNTIME: YES
+targets:
+  # The menu bar item and its window.
+  Fleet:
+    type: application
+    platform: macOS
+    sources:
+      - path: FleetMenu.swift
+      - path: FleetWindow.swift
+    dependencies:
+      # The helper travels inside the app, so one cask installs both.
+      - target: fleetd
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chetangoel.fleet
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_APP_SANDBOX: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  # The helper that answers for the Mac it runs on.
+  fleetd:
+    type: tool
+    platform: macOS
+    sources:
+      - path: fleetd/main.swift      # top-level code has to be in a file with this name
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chetangoel.fleetd
+        SWIFT_VERSION: "5.0"
+        # A tool has no bundle, so its version goes into the binary itself.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES

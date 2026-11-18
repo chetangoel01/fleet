@@ -1,0 +1,10 @@
+Idle cost of fleetd build fdaa40d1790e with its 20 s timer: pid, CPU time and memory (KB) from ps, twelve minutes apart, with no status asked in between.
+local start 15:00:09: 93986   0:00.06  13792
+mini start 15:00:09: 29050   0:00.07  13488
+m1-server start 15:00:10: 99249   0:00.13  14224
+local end   15:12:14: 93986   0:00.09  14032
+mini end   15:12:14: 29050   0:00.11  13312
+m1-server end   15:12:14: 99249   0:00.21  14432
+m5-macbook requests 5 took 83 ms, points 6 cpu over 20.5 last [1795032727, 8, 84, 24216, 48109] gaps [60, 459, 60, 60, 60]
+mini requests 5 took 89 ms, points 12 cpu over 13 last [1795032694, 6, 52, 46881, 18926] gaps [60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60]
+m1-server requests 5 took 192 ms, points 12 cpu over 16.8 last [1795032690, 16, 83, 774413, 758780] gaps [60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60]

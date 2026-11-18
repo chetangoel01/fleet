@@ -1,0 +1,32 @@
+fleetd measurement, 2026-11-18 14:04, idle 300 s, then 5 requests 60 s apart
+
+requests (time each status took to build, in ms)
+  1:  local 532  m1-server 622  mini 450
+  2:  local 475  m1-server 584  mini 452
+  3:  local 385  m1-server 625  mini 452
+  4:  local 364  m1-server 638  mini 440
+  5:  local 387  m1-server 643  mini 430
+
+samples: pid | rss KB | cpu time | footprint | helper open files | idle wakeups | open files on the whole Mac
+  local
+    start       52885|14192|0:00.33|5808KB|13|17|11151
+    after idle  52885|14160|0:00.33|5776KB|13|17|11264
+    after asks  52885|14288|0:00.44|5856KB|13|20|11264
+  m1-server
+    start       81032|14704|0:00.58|5921KB|13|0|20174
+    after idle  81032|14704|0:00.58|5905KB|13|0|20167
+    after asks  81032|14752|0:00.78|5953KB|13|0|20131
+  mini
+    start       27231|13776|0:00.35|5361KB|13|35|9190
+    after idle  27231|13040|0:00.35|5361KB|13|35|9206
+    after asks  27231|13152|0:00.46|5441KB|13|43|9212
+
+helper's own CPU
+  local      idle: 0.00 s over 300 s (0.0000% of one core)   asked: 0.022 s per request
+  m1-server  idle: 0.00 s over 300 s (0.0000% of one core)   asked: 0.040 s per request
+  mini       idle: 0.00 s over 300 s (0.0000% of one core)   asked: 0.022 s per request
+
+tools the helper starts (CPU seconds, user + system, measured by running each once)
+  local: launchctl + ps on every request 0.08 s; brew outdated every 6 h 1.61 s
+  m1-server: launchctl + ps on every request 0.06 s; brew outdated every 6 h 0.66 s
+  mini: launchctl + ps on every request 0.03 s; brew outdated every 6 h 0.32 s

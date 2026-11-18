@@ -1,0 +1,4 @@
+build/
+.DS_Store
+soak/night.pid
+Fleet.xcodeproj/
