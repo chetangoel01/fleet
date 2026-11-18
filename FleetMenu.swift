@@ -264,7 +264,8 @@ func onMac(_ machine: Machine, _ command: String) -> String {
 func quietly(_ machine: Machine, _ command: String) -> String {
     let shell = "zsh -lic '\(command)'"
     guard let ssh = machine.ssh else { return shell }
-    return "ssh -o BatchMode=yes -o ConnectTimeout=10 \(ssh) \"\(shell)\""
+    // Without the port forwards of an interactive session, whose warnings would land in the failure alert.
+    return "ssh -o BatchMode=yes -o ConnectTimeout=10 -o ClearAllForwardings=yes \(ssh) \"\(shell)\""
 }
 
 enum Fetched {
@@ -525,7 +526,8 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     return groups
 }
 
-let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale up"
+// In a Terminal window, not by the app: when Tailscale wants a sign-in it prints a link and waits.
+let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale up && print connected"
 
 /// What can still be done to another Mac that did not answer. `online` is what this Mac's
 /// Tailscale says about it, nil when that is not known.
@@ -535,7 +537,7 @@ func reach(_ machine: Machine, online: Bool?) -> [Row] {
         // With its Tailscale off, only a route over its own network reaches it.
         guard let lan = machine.lan else { return [] }
         return [Row(title: "Reconnect Tailscale", symbol: "network",
-                    action: .run("Reconnect Tailscale", command: "ssh -o BatchMode=yes -o ConnectTimeout=10 \(lan) '\(tailscaleUp)'"))]
+                    action: .terminal(command: "print 'On \(machine.name), over its own network (ssh \(lan))'\nssh -t \(lan) '\(tailscaleUp)'"))]
     }
     var rows = [Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)),
                 Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)"))]
@@ -637,7 +639,7 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
         alerts += mine(found.map { Row(title: $0.subject, value: $0.detail, level: $0.level, dot: $0.level) })
         if machine.ssh == nil, status.tailnet?.running == false {
             alerts += mine([Row(title: "Connect Tailscale", value: "off on this Mac", level: .bad, dot: .bad,
-                                action: .run("Connect Tailscale", command: quietly(machine, tailscaleUp)))])
+                                action: .terminal(command: onMac(machine, tailscaleUp)))])
         }
         macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: details(status, on: machine, now: now).flyout)])
 
