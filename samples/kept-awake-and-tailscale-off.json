@@ -1,0 +1,279 @@
+{
+ "awake": {
+  "fleet": {
+   "on": true,
+   "until": "2026-11-18T23:40:00Z"
+  },
+  "held_by": [
+   {
+    "process": "fleetd",
+    "reason": "Kept awake from Fleet"
+   }
+  ],
+  "sleep_after_min": 0,
+  "state": "ok"
+ },
+ "brew": {
+  "checked": "2026-11-18T17:08:07Z",
+  "names": [
+   "gh",
+   "codex"
+  ],
+  "outdated": 2,
+  "state": "ok"
+ },
+ "build": "9329d9c84eef",
+ "busiest": {
+  "cpu": {
+   "name": "com.apple.Virtualization.VirtualMachine",
+   "pct": 57.8
+  },
+  "memory": {
+   "mb": 9592,
+   "name": "com.apple.Virtualization.VirtualMachine"
+  },
+  "state": "ok"
+ },
+ "containers": {
+  "items": [
+   {
+    "name": "audiobookshelf",
+    "ports": [
+     4151
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "byparr",
+    "ports": [
+     8191
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "gluetun",
+    "ports": [
+     6881,
+     8080
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "immich_machine_learning",
+    "ports": [],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "immich_postgres",
+    "ports": [],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "immich_redis",
+    "ports": [],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "immich_server",
+    "ports": [
+     2283
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "port-sync",
+    "ports": [],
+    "state": "running",
+    "status": "Up 17 minutes"
+   },
+   {
+    "name": "prowlarr",
+    "ports": [
+     9696
+    ],
+    "state": "running",
+    "status": "Up 17 minutes"
+   },
+   {
+    "name": "qbittorrent",
+    "ports": [],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "radarr",
+    "ports": [
+     7878
+    ],
+    "state": "running",
+    "status": "Up 17 minutes"
+   },
+   {
+    "name": "seerr",
+    "ports": [
+     5055
+    ],
+    "state": "running",
+    "status": "Up 17 minutes"
+   },
+   {
+    "name": "shelfmark",
+    "ports": [
+     4150
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   },
+   {
+    "name": "sonarr",
+    "ports": [
+     8989
+    ],
+    "state": "running",
+    "status": "Up 17 minutes (healthy)"
+   }
+  ],
+  "state": "ok"
+ },
+ "disks": {
+  "items": [
+   {
+    "free_gb": 1169.7,
+    "internal": true,
+    "name": "Macintosh HD",
+    "path": "/",
+    "total_gb": 1995.2
+   },
+   {
+    "free_gb": 702.8,
+    "internal": false,
+    "name": "Media",
+    "path": "/Volumes/Media",
+    "total_gb": 2000.2
+   },
+   {
+    "free_gb": 287.9,
+    "internal": false,
+    "name": "Time Machine Backup",
+    "path": "/Volumes/Time Machine Backup",
+    "total_gb": 511.9
+   }
+  ],
+  "state": "ok"
+ },
+ "downloads": {
+  "items": [
+   {
+    "bytes_per_s": 2100000,
+    "eta_s": 742,
+    "name": "Some.Long.Release.Name.2026.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-GROUP",
+    "pct": 43
+   },
+   {
+    "bytes_per_s": 0,
+    "name": "Short name",
+    "pct": 7
+   },
+   {
+    "bytes_per_s": 18500000,
+    "eta_s": 9,
+    "name": "Nearly there",
+    "pct": 99
+   }
+  ],
+  "state": "ok"
+ },
+ "files": {
+  "limit": 491520,
+  "open": 20470,
+  "state": "ok",
+  "vnodes_free": 16000,
+  "vnodes_limit": 263168
+ },
+ "helper": {
+  "cpu_s": 0.119,
+  "open_files": 8,
+  "requests": 6,
+  "tools_cpu_s": 0.905,
+  "tools_run": 9
+ },
+ "host": "m1-server",
+ "jobs": {
+  "count": 27,
+  "failed": [
+   {
+    "label": "com.example.metrics-tunnel",
+    "last_exit": 255,
+    "running": true
+   },
+   {
+    "label": "com.example.sync-agent",
+    "last_exit": -11,
+    "running": true
+   },
+   {
+    "label": "com.example.media-selector",
+    "last_exit": 1,
+    "running": true
+   }
+  ],
+  "state": "ok"
+ },
+ "memory": {
+  "free_pct": 81,
+  "state": "ok",
+  "swap_total_mb": 6144,
+  "swap_used_mb": 4944
+ },
+ "power": {
+  "battery_pct": 100,
+  "charging": false,
+  "on_adapter": true,
+  "state": "ok",
+  "watts_in": 11.5,
+  "watts_load": 11.5
+ },
+ "schedules": {
+  "items": [
+   {
+    "app": "Codex",
+    "name": "Morning inbox check",
+    "schedule": "FREQ=DAILY;BYHOUR=6,8,10;BYMINUTE=0;BYSECOND=0"
+   }
+  ],
+  "state": "ok"
+ },
+ "slow_ms": {},
+ "tailnet": {
+  "peers": [],
+  "running": false,
+  "state": "ok"
+ },
+ "thermal": {
+  "cpu_c": 53.6,
+  "fans_rpm": [
+   2992,
+   3131
+  ],
+  "source": "cooler status file",
+  "state": "ok"
+ },
+ "time": "2026-11-18T17:09:35Z",
+ "time_machine": {
+  "automatic": true,
+  "destinations": [
+   "Time Machine Backup"
+  ],
+  "latest": "2026-11-18T03:30:21Z",
+  "state": "ok"
+ },
+ "took_ms": 176,
+ "uptime_s": 571825
+}

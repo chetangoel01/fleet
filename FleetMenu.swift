@@ -68,7 +68,12 @@ struct Status: Decodable {
         struct CPU: Decodable { var name: String; var pct: Double }
         struct Mem: Decodable { var name: String; var mb: Double }
     }
-    struct Awake: Decodable { var state: String; var error: String?; var heldBy: [Holder]? }
+    struct Awake: Decodable {
+        var state: String; var error: String?; var heldBy: [Holder]?
+        var fleet: Kept?            // nil from a helper that cannot be told to keep its Mac awake
+        var sleepAfterMin: Int?     // the Mac's own idle-sleep setting; 0 is never
+    }
+    struct Kept: Decodable { var on: Bool; var until: Date? }
     struct Holder: Decodable { var process: String }
     struct Thermal: Decodable { var state: String; var error: String?; var cpuC: Double?; var fansRpm: [Double]? }
     struct TimeMachine: Decodable { var state: String; var error: String?; var latest: Date?; var automatic: Bool?; var destinations: [String]? }
@@ -85,7 +90,7 @@ struct Status: Decodable {
     }
     /// A point a minute: unix time, CPU %, memory free %, bytes a second down, bytes a second up.
     struct History: Decodable { var points: [[Double]]? }
-    struct Tailnet: Decodable { var state: String; var error: String?; var peers: [Peer]? }
+    struct Tailnet: Decodable { var state: String; var error: String?; var running: Bool?; var peers: [Peer]? }
     struct Peer: Decodable { var name: String; var direct: Bool; var active: Bool; var relay: String }
 }
 
@@ -93,7 +98,8 @@ struct Machine {
     var name: String
     var url: URL
     var ssh: String?        // the ssh name actions use to reach it; nil for the Mac this runs on
-    var sleeps = false      // a Mac that is often asleep: not answering is normal, so it raises no warning
+    var lan: String?        // an ssh name that reaches it over its own network, for when its Tailscale is off
+    var sleeps = false      // a Mac that is often asleep or away: being offline is normal, so it raises no warning
     var server = false      // always on and plugged in: running on battery is worth a warning
 }
 
@@ -109,15 +115,17 @@ let machines: [Machine] = {
     return ["m1-server", "mini", "m5-macbook"].map { name in
         name == here
             ? Machine(name: name, url: URL(string: "http://127.0.0.1:4790/status")!, server: name == "m1-server")
-            : Machine(name: name, url: URL(string: "http://\(name):4791/status")!, ssh: name, sleeps: name != "m1-server", server: name == "m1-server")
+            : Machine(name: name, url: URL(string: "http://\(name):4791/status")!, ssh: name, lan: name == "m1-server" ? "m1-server-lan" : nil,
+                      sleeps: name != "m1-server", server: name == "m1-server")
     }
 }()
 
 // MARK: - Actions
 
-/// What clicking a row does. Nothing here changes a Mac by itself: a prompt waits in Claude
-/// for Return, and a command runs in a Terminal window where it can be watched and stopped.
+/// What clicking a row does. Only keeping a Mac awake changes one by itself: a prompt waits in
+/// Claude for Return, and a command runs in a Terminal window where it can be watched and stopped.
 enum Action {
+    case awake(Machine, minutes: Int?)      // nil lets it sleep again; 0 keeps it awake until told otherwise
     case open(URL)
     case claude(prompt: String)
     case terminal(command: String)
@@ -128,6 +136,7 @@ enum Action {
     /// The icon drawn before a row that does this.
     var symbol: String {
         switch self {
+        case .awake(_, let minutes): minutes == nil ? "moon.zzz" : "cup.and.saucer"
         case .open: "arrow.up.forward.square"
         case .claude: "bubble.left"
         case .terminal: "terminal"
@@ -389,12 +398,16 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
         groups.more.append(unread("Busiest", status.busiest.error))
     }
 
-    var holders: [String] = []
-    for holder in status.awake.heldBy ?? [] where !["powerd", "runningboardd"].contains(holder.process) && !holders.contains(holder.process) {
+    // Fleet's own hold comes first, under its name and with its end; the helper's process is not listed again.
+    let kept = status.awake.fleet
+    var holders: [String] = kept?.on == true ? ["Fleet" + (kept?.until.map { " until " + $0.formatted(date: .omitted, time: .shortened) } ?? "")] : []
+    for holder in status.awake.heldBy ?? [] where !["powerd", "runningboardd", "fleetd"].contains(holder.process) && !holders.contains(holder.process) {
         holders.append(holder.process)
     }
     if !holders.isEmpty {
         groups.more.append(Row(title: "Kept awake by", value: holders.joined(separator: ", "), note: holders.joined(separator: ", ")))
+    } else if let minutes = status.awake.sleepAfterMin {
+        groups.more.append(Row(title: "Sleeps when idle", value: minutes == 0 ? "never" : "after \(minutes) min"))
     }
     if let up = status.uptimeS { groups.more.append(Row(title: "Up", value: span(up))) }
 
@@ -413,6 +426,12 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
         groups.actions.append(Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)))
         groups.actions.append(Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)")))
     }
+    if let kept {
+        groups.actions += kept.on
+            ? [Row(title: "Stop Keeping Awake", action: .awake(machine, minutes: nil))]
+            : [Row(title: "Keep Awake", action: .awake(machine, minutes: 0)),
+               Row(title: "Keep Awake for 2 Hours", action: .awake(machine, minutes: 120))]
+    }
     for stopped in status.containers.items ?? [] where stopped.state != "running" {
         groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .terminal(command: onMac(machine, "docker start \(stopped.name)"))))
     }
@@ -427,6 +446,28 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
                                   action: .terminal(command: onMac(machine, "brew update && brew upgrade"))))
     }
     return groups
+}
+
+let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale up && print connected"
+
+/// What can still be done to another Mac that did not answer. `online` is what this Mac's
+/// Tailscale says about it, nil when that is not known.
+func reach(_ machine: Machine, online: Bool?) -> [Row] {
+    guard let ssh = machine.ssh else { return [] }
+    if online == false {
+        // With its Tailscale off, only a route over its own network reaches it.
+        guard let lan = machine.lan else { return [] }
+        return [Row(title: "Reconnect Tailscale", symbol: "network",
+                    action: .terminal(command: "print 'On \(machine.name), over its own network (ssh \(lan))'\nssh -t \(lan) '\(tailscaleUp)'"))]
+    }
+    var rows = [Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)),
+                Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)"))]
+    if online == true {
+        // The dollar sign is escaped so the user number is worked out on that Mac.
+        rows.append(Row(title: "Restart Helper", symbol: "arrow.clockwise",
+                        action: .terminal(command: onMac(machine, "launchctl kickstart -k gui/\\$(id -u)/com.chetangoel.fleetd && print restarted"))))
+    }
+    return rows
 }
 
 func dimmed(_ rows: [Row]) -> [Row] {
@@ -491,14 +532,24 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
     var qbittorrent: URL?
     let dockerHosts = fetched.filter { if case .status(let status) = $0.1 { status.containers.items?.isEmpty == false } else { false } }.count
 
+    // What this Mac's own Tailscale reports: whether it is connected, and which devices are online.
+    let tailscale = fetched.lazy.compactMap { machine, result -> Status.Tailnet? in
+        if machine.ssh == nil, case .status(let status) = result { status.tailnet } else { nil }
+    }.first
+
     for (machine, result) in fetched {
         func mine(_ rows: [Row]) -> [Row] { pending.contains(machine.name) ? dimmed(rows) : rows }
         guard case .status(let status) = result else {
             if case .failed(let reason) = result {
-                if !machine.sleeps {
-                    alerts += mine([Row(title: machine.name, value: "not answering", level: .bad, dot: .bad, note: reason)])
+                // Online on the tailnet and silent means the Mac is up and its helper is not.
+                let online = machine.ssh == nil || tailscale?.running != true
+                    ? nil : tailscale?.peers?.contains { $0.name.lowercased() == machine.name.lowercased() }
+                let what = online == true ? "helper not answering" : online == false ? "offline" : "not answering"
+                let expected = machine.sleeps && online != true
+                if !expected {
+                    alerts += mine([Row(title: machine.name, value: what, level: .bad, dot: .bad, note: reason)])
                 }
-                macs += mine([Row(title: machine.name, value: "not answering", dot: machine.sleeps ? .off : .bad, note: reason)])
+                macs += mine([Row(title: machine.name, value: what, dot: expected ? .off : .bad, note: reason, children: reach(machine, online: online))])
             } else {
                 macs.append(Row(title: machine.name, dot: .off))
             }
@@ -507,6 +558,10 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
 
         let found = problems(status, on: machine, now: now)
         alerts += mine(found.map { Row(title: $0.subject, value: $0.detail, level: $0.level, dot: $0.level) })
+        if machine.ssh == nil, status.tailnet?.running == false {
+            alerts += mine([Row(title: "Connect Tailscale", value: "off on this Mac", level: .bad, dot: .bad,
+                                action: .terminal(command: onMac(machine, tailscaleUp)))])
+        }
         macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: details(status, on: machine, now: now).flyout)])
 
         if let items = status.containers.items, !items.isEmpty {
@@ -566,6 +621,9 @@ func dump(_ rows: [Row], indent: String = "") -> String {
         if row.isSeparator { return "\(indent)----" }
         if row.isHeader { return "\(indent)[\(row.title)]" }
         let does = switch row.action {
+        case .awake(let machine, let minutes):
+            "  →  " + (minutes.map { $0 == 0 ? "keeps \(machine.name) awake until told to stop" : "keeps \(machine.name) awake for \($0) minutes" }
+                       ?? "lets \(machine.name) sleep again")
         case .open(let url): "  →  opens \(url.absoluteString)"
         case .claude(let prompt): "  →  Claude prompt (\(prompt.count) characters)"
         case .terminal(let command): "  →  Terminal: \(command)"
@@ -743,6 +801,18 @@ let fleet = Fleet()
 
 func carryOut(_ action: Action) {
     switch action {
+    case .awake(let machine, let minutes):
+        // The one command a helper takes. It answers 200 once the Mac is held or let go, and the next status shows it.
+        let path = minutes.map { $0 == 0 ? "awake/on" : "awake/on?minutes=\($0)" } ?? "awake/off"
+        guard let url = URL(string: path, relativeTo: machine.url) else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("1", forHTTPHeaderField: "X-Fleet")
+        request.timeoutInterval = 6
+        Task {
+            let answer = try? await URLSession.shared.data(for: request)
+            if (answer?.1 as? HTTPURLResponse)?.statusCode == 200 { fleet.refresh() } else { NSSound.beep() }
+        }
     case .quit:
         NSApp.terminate(nil)
     case .window:

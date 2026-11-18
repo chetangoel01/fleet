@@ -1,5 +1,8 @@
 {
  "awake": {
+  "fleet": {
+   "on": false
+  },
   "held_by": [
    {
     "process": "Amphetamine",
@@ -22,6 +25,7 @@
     "reason": "Handoff"
    }
   ],
+  "sleep_after_min": 0,
   "state": "ok"
  },
  "brew": {

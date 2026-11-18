@@ -366,7 +366,8 @@ func jobs() -> [String: Any] {
             let fields = line.split(separator: "\t")
             guard fields.count == 3, !fields[2].hasPrefix("com.apple."), !fields[2].hasPrefix("application.") else { continue }
             count += 1
-            if let status = Int(fields[1]), status != 0 {
+            // The helper's own job is left out: it leaves with 1 after every upgrade so that launchd starts the new copy.
+            if let status = Int(fields[1]), status != 0, fields[2] != "com.chetangoel.fleetd" {
                 failed.append(["label": String(fields[2]), "last_exit": status, "running": fields[0] != "-"])
             }
         }
@@ -378,7 +379,64 @@ func jobs() -> [String: Any] {
     }
 }
 
-/// What is stopping this Mac from sleeping when idle.
+// MARK: Keeping this Mac awake
+
+/// The one thing the helper does when told to. The choice is kept in a file, because the helper
+/// restarts with every upgrade and the Mac should stay awake through that.
+let awakeFile = NSHomeDirectory() + "/Library/Application Support/Fleet/awake-until"
+/// When to stop keeping this Mac awake, as unix time. 0 is "until told to stop"; nil is "not keeping it awake".
+var awakeUntil = (try? String(contentsOfFile: awakeFile, encoding: .utf8)).flatMap { Double($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+var awakeAssertion = IOPMAssertionID(0)
+
+func keepAwake(until: Double?) {
+    awakeUntil = until
+    if let until {
+        try? FileManager.default.createDirectory(atPath: (awakeFile as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        try? String(until).write(toFile: awakeFile, atomically: true, encoding: .utf8)
+    } else {
+        try? FileManager.default.removeItem(atPath: awakeFile)
+    }
+    holdOrRelease()
+    lastSnapshot = nil  // the next status shows the change
+}
+
+/// Makes what macOS is told match the choice, and ends a timed one. Run at start and on the sampler's 20 s tick.
+func holdOrRelease() {
+    if let until = awakeUntil, until != 0, until <= Date().timeIntervalSince1970 { return keepAwake(until: nil) }
+    if awakeUntil != nil, awakeAssertion == 0 {
+        // The same request `caffeinate -i` makes: no sleep while idle. The display may still sleep.
+        IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleSystemSleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                                    "Kept awake from Fleet" as CFString, &awakeAssertion)
+    } else if awakeUntil == nil, awakeAssertion != 0 {
+        IOPMAssertionRelease(awakeAssertion)
+        awakeAssertion = 0
+    }
+}
+
+/// Carries out "POST /awake/on", "POST /awake/on?minutes=120" or "POST /awake/off", and says whether
+/// the request was one of them. It must carry an X-Fleet header and no Origin. A web page cannot add
+/// the header without first asking the helper's leave, which is never given, and a browser puts
+/// Origin on every request a page sends this way.
+func awakeCommand(_ lines: [String]) -> Bool {
+    let headers = lines.dropFirst().map { $0.lowercased() }
+    let request = (lines.first ?? "").split(separator: " ")
+    guard request.count == 3, request[0] == "POST", headers.contains(where: { $0.hasPrefix("x-fleet:") }),
+          !headers.contains(where: { $0.hasPrefix("origin:") }) else { return false }
+    let target = String(request[1]), timed = "/awake/on?minutes="
+    if target == "/awake/off" {
+        keepAwake(until: nil)
+    } else if target == "/awake/on" {
+        keepAwake(until: 0)
+    } else if target.hasPrefix(timed), let minutes = Double(target.dropFirst(timed.count)), (1...10080).contains(minutes) {
+        keepAwake(until: Date().timeIntervalSince1970 + minutes * 60)
+    } else {
+        return false
+    }
+    return true
+}
+
+/// What is stopping this Mac from sleeping when idle, whether Fleet is one of those things, and
+/// how long the Mac's own setting lets it sit idle before sleeping (0 is never).
 func awake() -> [String: Any] {
     var unmanaged: Unmanaged<CFDictionary>?
     guard IOPMCopyAssertionsByProcess(&unmanaged) == kIOReturnSuccess,
@@ -394,7 +452,12 @@ func awake() -> [String: Any] {
         }
     }
     holders.sort { ($0["process"] ?? "", $0["reason"] ?? "") < ($1["process"] ?? "", $1["reason"] ?? "") }
-    return ["state": "ok", "held_by": Array(holders.prefix(8))]
+    var fleet: [String: Any] = ["on": awakeUntil != nil]
+    if let until = awakeUntil, until != 0 { fleet["until"] = iso(Date(timeIntervalSince1970: until)) }
+    var result: [String: Any] = ["state": "ok", "held_by": Array(holders.prefix(8)), "fleet": fleet]
+    if let settings = SCDynamicStoreCopyValue(nil, "State:/IOKit/PowerManagement/CurrentSettings" as CFString) as? [String: Any],
+       let minutes = settings["System Sleep Timer"] as? Int { result["sleep_after_min"] = minutes }
+    return result
 }
 
 /// CPU temperature and fan speeds, from Cooler's read-only probe where Cooler is installed.
@@ -663,7 +726,7 @@ func tailnet() -> [String: Any] {
             let direct = !((peer["CurAddr"] as? String) ?? "").isEmpty
             return ["name": name, "direct": direct, "active": direct || peer["Active"] as? Bool == true, "relay": peer["Relay"] as? String ?? ""]
         }
-        return ["state": "ok", "peers": peers.sorted { ($0["name"] as? String ?? "") < ($1["name"] as? String ?? "") }]
+        return ["state": "ok", "running": parsed["BackendState"] as? String == "Running", "peers": peers.sorted { ($0["name"] as? String ?? "") < ($1["name"] as? String ?? "") }]
     } catch let failure as Failure {
         return unknown(failure.message)
     } catch {
@@ -778,6 +841,8 @@ func handle(_ connection: NWConnection) {
             requests += 1
             code = "200 OK"
             body = snapshot()
+        } else if addressedHere, awakeCommand(lines) {
+            code = "200 OK"
         }
         let head = "HTTP/1.1 \(code)\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
         connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
@@ -818,7 +883,7 @@ func leaveIfReplaced() {
 }
 
 sampler.schedule(deadline: .now(), repeating: 20, leeway: .seconds(2))
-sampler.setEventHandler { sample(); leaveIfReplaced() }
+sampler.setEventHandler { sample(); holdOrRelease(); leaveIfReplaced() }
 sampler.resume()
 
 let parameters = NWParameters.tcp

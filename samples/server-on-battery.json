@@ -1,5 +1,8 @@
 {
  "awake": {
+  "fleet": {
+   "on": false
+  },
   "held_by": [
    {
     "process": "Amphetamine",
@@ -18,6 +21,7 @@
     "reason": "Powerd - Prevent sleep while display is on"
    }
   ],
+  "sleep_after_min": 0,
   "state": "ok"
  },
  "brew": {
@@ -1161,6 +1165,7 @@
     "relay": "nyc"
    }
   ],
+  "running": true,
   "state": "ok"
  },
  "thermal": {
