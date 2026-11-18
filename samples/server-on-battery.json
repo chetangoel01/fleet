@@ -147,6 +147,53 @@
   ],
   "state": "ok"
  },
+ "cooling": {
+  "baseline_rpm": 1800,
+  "curve": [
+   [
+    45,
+    0
+   ],
+   [
+    55,
+    0.1
+   ],
+   [
+    65,
+    0.3
+   ],
+   [
+    75,
+    0.65
+   ],
+   [
+    85,
+    1
+   ]
+  ],
+  "palm_curve": [
+   [
+    30,
+    0
+   ],
+   [
+    33,
+    0.2
+   ],
+   [
+    36,
+    0.5
+   ],
+   [
+    40,
+    1
+   ]
+  ],
+  "reason": "Cooling curve active",
+  "running": true,
+  "state": "ok",
+  "switchable": false
+ },
  "cpu": {
   "cores_pct": [
    96,

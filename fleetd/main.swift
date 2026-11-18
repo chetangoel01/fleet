@@ -454,6 +454,32 @@ func awakeCommand(_ lines: [String]) -> Bool {
     return true
 }
 
+/// Cooler, the fan controller, where it is installed: whether its controller is running and the
+/// curve it is set to. The helper only reads; switching goes through Cooler's own root script.
+func cooling() -> [String: Any] {
+    let folder = "/Library/Application Support/Cooler"
+    guard FileManager.default.isExecutableFile(atPath: folder + "/cooler") else { return ["state": "none"] }
+    func object(_ file: String) -> [String: Any]? {
+        FileManager.default.contents(atPath: folder + "/" + file).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    }
+    func points(_ value: Any?) -> [[Double]]? {
+        (value as? [[String: Any]])?.compactMap { point in
+            guard let temperature = point["temperature"] as? Double, let fraction = point["fraction"] as? Double else { return nil }
+            return [temperature, fraction]
+        }
+    }
+    guard let config = object("config.json"), let baseline = config["baselineRPM"] as? Double,
+          let curve = points(config["curve"]), let palm = points(config["palmCurve"]) else { return unknown("config.json could not be read") }
+    // launchd says whether the controller is running; Cooler's own status file can be hours old.
+    // With the controller off, macOS runs the fans and the curve is only what was last set.
+    let job = (try? run("/bin/launchctl", ["print", "system/com.chetangoel.cooler"], timeout: 2)) ?? ""
+    let pid = job.firstMatch(of: /\bpid = (\d+)/).flatMap { Int($0.1) }
+    var result: [String: Any] = ["state": "ok", "running": pid != nil, "baseline_rpm": Int(baseline), "curve": curve, "palm_curve": palm,
+                                 "switchable": FileManager.default.isExecutableFile(atPath: folder + "/apply-profile")]
+    if let pid, let status = object("status.json"), status["pid"] as? Int == pid { result["reason"] = status["reason"] }
+    return result
+}
+
 /// What is stopping this Mac from sleeping when idle, whether Fleet is one of those things, and
 /// how long the Mac's own setting lets it sit idle before sleeping (0 is never).
 func awake() -> [String: Any] {
@@ -810,7 +836,7 @@ func status() -> [String: Any] {
         "memory": memory(), "files": openFiles(), "power": timed("power", power), "disks": timed("disks", disks),
         "containers": containerList, "downloads": timed("downloads") { downloads(containerList) },
         "jobs": timed("jobs", jobs), "busiest": timed("busiest", busiest),
-        "awake": timed("awake", awake), "thermal": timed("thermal", thermal),
+        "awake": timed("awake", awake), "thermal": timed("thermal", thermal), "cooling": timed("cooling", cooling),
         "time_machine": timeMachine(), "brew": slowBrew.current(), "schedules": timed("schedules", schedules),
         "cpu": measured.cpu, "network": measured.network, "tailnet": timed("tailnet", tailnet),
         "history": ["every_s": 60, "points": history],

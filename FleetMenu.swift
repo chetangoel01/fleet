@@ -39,6 +39,7 @@ struct Status: Decodable {
     var cpu: CPU?
     var network: Network?
     var tailnet: Tailnet?
+    var cooling: Cooling?
     var history: History?
     var time: Date?                 // the helper's clock when it answered
 
@@ -91,6 +92,11 @@ struct Status: Decodable {
     }
     /// A point a minute: unix time, CPU %, memory used %, bytes a second down, bytes a second up.
     struct History: Decodable { var points: [[Double]]? }
+    /// Cooler's fan control. `curve` and `palmCurve` are points of temperature and fan demand (0 to 1).
+    struct Cooling: Decodable {
+        var state: String; var error: String?
+        var running: Bool?; var switchable: Bool?; var baselineRpm: Double?; var curve: [[Double]]?; var palmCurve: [[Double]]?; var reason: String?
+    }
     struct Tailnet: Decodable { var state: String; var error: String?; var running: Bool?; var peers: [Peer]? }
     struct Peer: Decodable { var name: String; var direct: Bool; var active: Bool; var relay: String }
 }
@@ -146,6 +152,53 @@ enum Action {
         case .quit: "power"
         }
     }
+}
+
+/// One of Cooler's fan profiles: the speed the fans idle at, then fan demand (0 to 1 of the range
+/// above that) against the chip's temperature and the palm rest's.
+struct FanProfile {
+    var name: String; var baseline: Int; var chip: [[Double]]; var palm: [[Double]]
+
+    /// What Cooler's `apply-profile curve` reads.
+    var edit: String {
+        func points(_ curve: [[Double]]) -> String {
+            "[" + curve.map { "{\"temperature\":\(Int($0[0])),\"fraction\":\($0[1])}" }.joined(separator: ",") + "]"
+        }
+        return "{\"baselineRPM\":\(baseline),\"curve\":\(points(chip)),\"palmCurve\":\(points(palm))}"
+    }
+}
+
+let fanProfiles = [
+    FanProfile(name: "Quiet", baseline: 1200, chip: [[50, 0], [60, 0.05], [70, 0.2], [80, 0.5], [90, 1]], palm: [[32, 0], [35, 0.1], [38, 0.35], [40, 1]]),
+    FanProfile(name: "Balanced", baseline: 1500, chip: [[45, 0], [55, 0.05], [65, 0.2], [75, 0.5], [85, 0.8], [90, 1]], palm: [[31, 0], [34, 0.15], [37, 0.4], [40, 1]]),
+    FanProfile(name: "Cooler", baseline: 1800, chip: [[45, 0], [55, 0.1], [65, 0.3], [75, 0.65], [85, 1]], palm: [[30, 0], [33, 0.2], [36, 0.5], [40, 1]]),
+    FanProfile(name: "Max Cooling", baseline: 1800, chip: [[10, 1], [90, 1]], palm: [[10, 1], [90, 1]]),
+]
+
+/// The name of the profile a Mac's fans are on: Automatic while Cooler's controller is off and
+/// macOS runs them, Custom for a curve that is none of the profiles above.
+func fanProfile(_ cooling: Status.Cooling) -> String {
+    guard cooling.running == true else { return "Automatic" }
+    func same(_ a: [[Double]]?, _ b: [[Double]]) -> Bool {
+        a?.count == b.count && zip(a ?? [], b).allSatisfy { $0.count == 2 && abs($0[0] - $1[0]) < 0.001 && abs($0[1] - $1[1]) < 0.001 }
+    }
+    return fanProfiles.first { Double($0.baseline) == cooling.baselineRpm && same(cooling.curve, $0.chip) && same(cooling.palmCurve, $0.palm) }?.name ?? "Custom"
+}
+
+/// The rows that switch this Mac's fans. Cooler's root script does the switching, and its sudo
+/// rule lets an admin run it without a password; it prints why when it refuses.
+func fanChoices(current: String, on machine: Machine) -> [Row] {
+    let script = "sudo -n '/Library/Application Support/Cooler/apply-profile'"
+    func row(_ name: String, _ command: String) -> Row {
+        Row(title: name, symbol: name == current ? "checkmark.circle" : "circle",
+            action: .terminal(command: "print 'On this Mac (\(machine.name))'\n\(command) && print 'Fan profile: \(name)'"))
+    }
+    var rows = [row("Automatic", "\(script) automatic")]
+    rows += fanProfiles.map { row($0.name, "print -r -- '\($0.edit)' | \(script) curve") }
+    // The curve last saved in Cooler's editor.
+    let saved = NSHomeDirectory() + "/Library/Application Support/Cooler/custom.json"
+    if FileManager.default.fileExists(atPath: saved) { rows.append(row("Custom", "\(script) curve < '\(saved)'")) }
+    return rows
 }
 
 func place(_ machine: Machine) -> String {
@@ -435,6 +488,17 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
             ? [Row(title: "Stop Keeping Awake", action: .awake(machine, minutes: nil))]
             : [Row(title: "Keep Awake", action: .awake(machine, minutes: 0)),
                Row(title: "Keep Awake for 2 Hours", action: .awake(machine, minutes: 120))]
+    }
+    if let cooling = status.cooling, cooling.state == "ok" {
+        let current = fanProfile(cooling)
+        // Switching is offered on this Mac only: no other Mac has Cooler's switching script yet.
+        if machine.ssh == nil, cooling.switchable == true {
+            groups.actions.append(Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(current: current, on: machine)))
+        } else {
+            groups.more.append(Row(title: "Fan profile", value: current, note: cooling.reason))
+        }
+    } else if status.cooling?.state == "unknown" {
+        groups.more.append(unread("Fan profile", status.cooling?.error))
     }
     for stopped in status.containers.items ?? [] where stopped.state != "running" {
         groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .terminal(command: onMac(machine, "docker start \(stopped.name)"))))

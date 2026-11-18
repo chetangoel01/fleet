@@ -282,10 +282,23 @@ struct MacPage: View {
                 // Everything that can be done to this Mac, wrapping to as many lines as the window needs.
                 Flow(spacing: 8) {
                     ForEach(groups.actions, id: \.title) { row in
-                        Button { row.action.map(carryOut) } label: {
-                            Label(row.title, systemImage: row.symbol ?? row.action?.symbol ?? "")
+                        if row.children.isEmpty {
+                            Button { row.action.map(carryOut) } label: {
+                                Label(row.title, systemImage: row.symbol ?? row.action?.symbol ?? "")
+                            }
+                            .help(row.note ?? "")
+                        } else {
+                            // A choice among several, such as the fan profile: the button names the one in force.
+                            Menu {
+                                ForEach(row.children, id: \.title) { choice in
+                                    Button { choice.action.map(carryOut) } label: { Label(choice.title, systemImage: choice.symbol ?? "") }
+                                }
+                            } label: {
+                                Label("\(row.title): \(row.value)", systemImage: row.symbol ?? "")
+                            }
+                            .fixedSize()
+                            .help(row.note ?? "")
                         }
-                        .help(row.note ?? "")
                     }
                 }
                 .padding(.top, -8)
