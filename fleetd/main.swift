@@ -102,10 +102,29 @@ func run(_ tool: String, _ toolArguments: [String], environment: [String: String
 
 // MARK: Readings taken in-process
 
+let host = mach_host_self()
+
+/// Memory in use, as Activity Monitor's "Memory Used": what is installed less the free pages and
+/// the files the system keeps cached. Within 0.1 GB of Activity Monitor on a 48 GB Mac (2026-11-18).
+func memoryUsedPct() -> Int? {
+    var counts = vm_statistics64()
+    var size = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+    let read = withUnsafeMutablePointer(to: &counts) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(size)) { host_statistics64(host, HOST_VM_INFO64, $0, &size) }
+    }
+    guard read == KERN_SUCCESS, let installed = sysctlValue("hw.memsize", UInt64(0)), installed > 0,
+          let page = sysctlValue("hw.pagesize", Int64(0)) else { return nil }
+    // The free count includes the speculative pages, which are also among the cached files.
+    let spare = Double(counts.free_count) - Double(counts.speculative_count) + Double(counts.external_page_count)
+    return Int(((1 - spare * Double(page) / Double(installed)) * 100).rounded())
+}
+
 func memory() -> [String: Any] {
-    guard let level = sysctlValue("kern.memorystatus_level", Int32(0)),
+    guard let used = memoryUsedPct(), let level = sysctlValue("kern.memorystatus_level", Int32(0)),
           let swap = sysctlValue("vm.swapusage", xsw_usage()) else { return unknown("sysctl failed") }
-    return ["state": "ok", "free_pct": Int(level),
+    // free_pct is the kernel's own measure of how close the Mac is to running short, which is what
+    // a warning should follow; it is not the rest of used_pct.
+    return ["state": "ok", "used_pct": used, "free_pct": Int(level),
             "swap_used_mb": Int(swap.xsu_used / 1_048_576), "swap_total_mb": Int(swap.xsu_total / 1_048_576)]
 }
 
@@ -663,7 +682,7 @@ func sample() {
     guard seconds >= 55 else { return }
     history.append([Int(now.at.timeIntervalSince1970),
                     minute.total == 0 ? 0 : Int((Double(minute.busy) / Double(minute.total) * 100).rounded()),
-                    Int(sysctlValue("kern.memorystatus_level", Int32(0)) ?? 0),
+                    memoryUsedPct() ?? 0,
                     Int(Double(minute.received) / seconds), Int(Double(minute.sent) / seconds)])
     history.removeFirst(max(0, history.count - 180))
     minute = (now.at, 0, 0, 0, 0)

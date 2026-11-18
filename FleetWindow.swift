@@ -311,7 +311,9 @@ struct MacPage: View {
                 if let points = status.history?.points.map({ $0.filter { $0.count == 5 } }), points.count > 1, let until = status.time {
                     Box(title: "Last 3 hours", symbol: "chart.xyaxis.line") {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 12)], spacing: 12) {
-                            ForEach(Array(["CPU", "Memory free", "Download", "Upload"].enumerated()), id: \.offset) { index, title in
+                            // Before 0.2.1 a point held memory free where it now holds memory in use; such a helper
+                            // sends no used_pct, and its Mac goes without the memory graph.
+                            ForEach(Array(["CPU", "Memory", "Download", "Upload"].enumerated()).filter { $0.offset != 1 || status.memory.usedPct != nil }, id: \.offset) { index, title in
                                 Trend(title: title, points: points.map { (Date(timeIntervalSince1970: $0[0]), $0[index + 1]) }, until: until,
                                       top: index < 2 ? 100 : nil, label: index < 2 ? { "\(Int($0))%" } : rate)
                             }
@@ -365,7 +367,7 @@ struct MacPage: View {
     private func share(_ title: String, of status: Status) -> Double? {
         switch title {
         case "Battery": status.power.batteryPct.map { $0 / 100 }
-        case "Memory": status.memory.freePct.map { 1 - $0 / 100 }
+        case "Memory": status.memory.usedPct.map { $0 / 100 }
         default: nil
         }
     }

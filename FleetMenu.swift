@@ -50,7 +50,8 @@ struct Status: Decodable {
         var name: String; var freeGb: Double; var totalGb: Double
         var low: Bool { freeGb < 25 || freeGb < totalGb * 0.1 }       // worth a warning
     }
-    struct Memory: Decodable { var state: String; var error: String?; var freePct: Double?; var swapUsedMb: Double? }
+    /// `freePct` is the kernel's measure of how close the Mac is to running short, not the rest of `usedPct`.
+    struct Memory: Decodable { var state: String; var error: String?; var usedPct: Double?; var freePct: Double?; var swapUsedMb: Double? }
     struct Files: Decodable {
         var state: String; var error: String?
         var open: Double?; var limit: Double?; var vnodesFree: Double?; var vnodesLimit: Double?
@@ -88,7 +89,7 @@ struct Status: Decodable {
         var state: String; var error: String?
         var downBps: Double?; var upBps: Double?; var interface: String?; var kind: String?; var address: String?; var tailscale: String?
     }
-    /// A point a minute: unix time, CPU %, memory free %, bytes a second down, bytes a second up.
+    /// A point a minute: unix time, CPU %, memory used %, bytes a second down, bytes a second up.
     struct History: Decodable { var points: [[Double]]? }
     struct Tailnet: Decodable { var state: String; var error: String?; var running: Bool?; var peers: [Peer]? }
     struct Peer: Decodable { var name: String; var direct: Bool; var active: Bool; var relay: String }
@@ -381,8 +382,11 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     }
 
     let memory = status.memory
-    if let free = memory.freePct {
-        groups.now.append(Row(title: "Memory", value: "\(Int(free))% free", level: free < 10 ? .warn : nil))
+    if memory.state == "ok" {
+        // A helper older than 0.2.1 sends no memory in use, and its Mac goes without the row.
+        if let used = memory.usedPct {
+            groups.now.append(Row(title: "Memory", value: "\(Int(used))% used", level: (memory.freePct ?? 100) < 10 ? .warn : nil))
+        }
         if let swap = memory.swapUsedMb, swap >= 100 { groups.more.append(Row(title: "Swap", value: megabytes(swap))) }
     } else if memory.state == "unknown" {
         groups.now.append(unread("Memory", memory.error))
