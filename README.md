@@ -16,7 +16,9 @@ brew upgrade --cask fleet                                                       
 ```
 
 - The cask puts `Fleet.app` in `/Applications` and writes `~/Library/LaunchAgents/com.chetangoel.fleetd.plist`, a per-user launchd job that runs the helper at login and restarts it if it crashes. Nothing asks for a password.
-- Homebrew's install steps run in a sandbox that cannot talk to launchd, so the first install cannot start the helper: the `launchctl bootstrap` line does, and so does logging out and in. An upgrade needs no such step. The cask stops the old helper and launchd, which already has the job, starts the new copy.
+- Homebrew's install steps run in a sandbox that cannot talk to launchd, so the first install cannot start the helper: the `launchctl bootstrap` line does, and so does logging out and in.
+- The first time the helper starts on a Mac, macOS asks on that Mac's screen whether to open Fleet, because it was downloaded, and holds the helper until someone clicks Open. On a Mac with nobody at it, do that click over Screen Sharing. While its screen is locked the prompt waits behind the lock and the helper does not answer.
+- An upgrade needs neither step. Homebrew marks the new copy as approved when the old one was and both are signed by the same developer. The running helper checks every 20 seconds whether its file has been replaced, waits until that mark is on the new copy, and leaves; launchd then starts the new one. `brew reinstall`, and an uninstall followed by an install, count as first installs, so the prompt comes back.
 - `brew uninstall --cask fleet` sends the helper an interrupt, which it answers by leaving with 0 so that launchd does not start it again, and removes the launchd file.
 - On the Mac that should show the menu bar item, open Fleet once and choose **Open at Login** in its menu. The other Macs only need the helper.
 - The app is signed with a Developer ID and notarized. It is built for Apple silicon and macOS 15 or later, and has only been run on macOS 27.

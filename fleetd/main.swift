@@ -29,7 +29,8 @@ while let argument = arguments.next() {
 }
 
 // Started by launchd there is nowhere for a complaint to go, so it goes to a log of the helper's own.
-if getppid() == 1 { freopen(NSHomeDirectory() + "/Library/Logs/fleetd.log", "a", stderr) }
+let underLaunchd = getppid() == 1
+if underLaunchd { freopen(NSHomeDirectory() + "/Library/Logs/fleetd.log", "a", stderr) }
 
 // MARK: Helpers
 
@@ -792,11 +793,32 @@ if once {
 }
 
 // Homebrew sends an interrupt when the cask is removed. Leaving with 0 tells launchd not to
-// start the helper again; an upgrade kills it instead, and launchd then starts the new copy.
+// start the helper again.
 signal(SIGINT) { _ in _exit(0) }
 
+// An upgrade puts a new copy of the helper where this one was started from, and this one then
+// leaves so that launchd starts the new copy. It leaves only once macOS will run that copy:
+// Homebrew marks the new app as approved a moment after installing it, and a copy started
+// sooner is held for an "Open" prompt that nobody answers on a Mac with no one at its screen.
+let executable = Bundle.main.executablePath ?? CommandLine.arguments[0]
+func fileNumber(_ path: String) -> UInt64? {
+    let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+    return (attributes?[.systemFileNumber] as? NSNumber)?.uint64Value
+}
+let startedAs = fileNumber(executable)
+
+func leaveIfReplaced() {
+    guard underLaunchd, let now = fileNumber(executable), now != startedAs else { return }
+    // The download flag starts with a hexadecimal number, and 0x40 in it is the approval.
+    // A copy with no flag at all starts as well.
+    var flag = [CChar](repeating: 0, count: 256)
+    if getxattr(executable, "com.apple.quarantine", &flag, 255, 0, 0) > 0,
+       (Int(String(cString: flag).prefix { $0 != ";" }, radix: 16) ?? 0) & 0x40 == 0 { return }
+    exit(1)  // launchd starts the helper again only after a failure
+}
+
 sampler.schedule(deadline: .now(), repeating: 20, leeway: .seconds(2))
-sampler.setEventHandler(handler: sample)
+sampler.setEventHandler { sample(); leaveIfReplaced() }
 sampler.resume()
 
 let parameters = NWParameters.tcp
