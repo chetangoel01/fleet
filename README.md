@@ -209,15 +209,20 @@ That night also found a crash: the first time a tool ran past its deadline, the 
 - `fleetd --once` prints one status document and exits, without listening.
 - Started by launchd, the helper writes to `~/Library/Logs/fleetd.log` only when it cannot start.
 
-What was checked on 2026-11-18, all on m5-macbook with releases installed from the tap:
+What was checked on 2026-11-18, on m5-macbook unless a line names another Mac, with releases installed from the tap:
 
-- **First install (0.1.0).** After the `launchctl bootstrap` line macOS showed its Open prompt, and the helper answered once it was clicked, with every reading in the same state as the script-installed copy before it. On mini the same install was done over ssh with the screen locked: the prompt went up behind the lock and the helper was still held there when this was written. m1-server had not been moved to the cask yet.
+- **First install (0.1.0).** After the `launchctl bootstrap` line macOS showed its Open prompt, and the helper answered once it was clicked, with every reading in the same state as the script-installed copy before it. On mini the same install was done over ssh with the screen locked: the prompt went up behind the lock and the helper stayed held until Open was clicked there later that day; it then answered with every reading in the state it had before the move.
 - **Upgrade from a release without the self-restart (0.1.0 to 0.1.1).** No prompt, the approval mark was on the new copy, and Homebrew reopened the menu bar app. The 0.1.0 helper kept running until `launchctl kickstart -k gui/$(id -u)/com.chetangoel.fleetd`; a Mac still on 0.1.0 needs that one command after upgrading.
 - **Upgrade between two releases with it (0.1.1 to 0.1.2).** Nothing was run after `brew upgrade`: no prompt, the app reopened, and a new helper process answered as 0.1.2 16 seconds after Homebrew finished.
+- **Unattended upgrades on two Macs (0.1.2 to 0.2.0, then 0.2.1).** m5-macbook and mini, mini over ssh with its screen locked: a new helper answered as the new release within 20 seconds of Homebrew finishing, with no prompt. Mini came from 0.1.0 and needed the one `launchctl kickstart` first.
+- **A keep-awake hold across an upgrade (0.2.0 to 0.2.1, on mini).** A two-hour hold was set before `brew upgrade`. Afterwards `pmset -g assertions` showed the new helper process holding it, with the same end time.
+- **The keep-awake command from another Mac**, m5-macbook to mini and to m1-server through the tailnet port: on, off, and a request without the header refused, each compared with `pmset -g assertions` on the Mac itself. `./check-awake.sh` covers the rest on a scratch helper.
 - **The helper's wait**, with a scratch copy under a temporary launchd job: replaced by a copy flagged as downloaded and not approved, it kept running for 50 seconds; with the flag removed it left and launchd started the new copy.
 - **Uninstall (0.1.0, from a local copy of the cask).** No helper running 35 seconds later, past launchd's 30-second restart interval, and no launchd file.
 
-Why the helper restarts itself: the cask's install steps run before Homebrew marks the new copy approved, so a helper the cask restarted came up unapproved and waited for the prompt on every upgrade. Not checked: an upgrade on a Mac whose copy was never approved, and the login item starting the app at login.
+Why the helper restarts itself: the cask's install steps run before Homebrew marks the new copy approved, so a helper the cask restarted came up unapproved and waited for the prompt on every upgrade. Not checked: an upgrade on a Mac whose copy was never approved, the login item starting the app at login, and an uninstall of a release later than 0.1.0.
+
+m1-server is not on the cask yet. It runs the 0.2.1 release's helper from `~/Library/Application Support/Fleet/`, put there over ssh by the install script this repository had before the cask, and will not pick up `brew upgrade`. Moving it needs someone at its screen for the Open prompt: install the cask while the old helper keeps answering, click Open, then `launchctl bootout` and `bootstrap` the job so it runs the copy inside `Fleet.app`. Do not run the old `uninstall.sh` there: it deletes the launchd file the cask wrote and the folder that holds the keep-awake choice. Remove only `fleetd`, `install-local.sh` and `uninstall.sh` from that folder.
 
 ## What it costs
 
