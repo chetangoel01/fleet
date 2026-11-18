@@ -135,7 +135,8 @@ enum Action {
     case awake(Machine, minutes: Int?)      // nil lets it sleep again; 0 keeps it awake until told otherwise
     case open(URL)
     case claude(prompt: String)
-    case terminal(command: String)
+    case terminal(command: String)          // in a Terminal window: a session, or output worth reading
+    case run(String, command: String)       // by the app itself, with no window; the name is for the alert when it fails
     case window
     case login
     case quit
@@ -147,6 +148,7 @@ enum Action {
         case .open: "arrow.up.forward.square"
         case .claude: "bubble.left"
         case .terminal: "terminal"
+        case .run: "bolt"
         case .window: "macwindow"
         case .login: SMAppService.mainApp.status == .enabled ? "checkmark.circle" : "circle"
         case .quit: "power"
@@ -190,8 +192,7 @@ func fanProfile(_ cooling: Status.Cooling) -> String {
 func fanChoices(current: String, on machine: Machine) -> [Row] {
     let script = "sudo -n '/Library/Application Support/Cooler/apply-profile'"
     func row(_ name: String, _ command: String) -> Row {
-        Row(title: name, symbol: name == current ? "checkmark.circle" : "circle",
-            action: .terminal(command: "print 'On this Mac (\(machine.name))'\n\(command) && print 'Fan profile: \(name)'"))
+        Row(title: name, symbol: name == current ? "checkmark.circle" : "circle", action: .run("Fan Profile: \(name)", command: command))
     }
     var rows = [row("Automatic", "\(script) automatic")]
     rows += fanProfiles.map { row($0.name, "print -r -- '\($0.edit)' | \(script) curve") }
@@ -256,6 +257,14 @@ func onMac(_ machine: Machine, _ command: String) -> String {
     let shell = "zsh -lic '\(command)'"
     guard let ssh = machine.ssh else { return "print 'On this Mac (\(machine.name))'\n\(shell)" }
     return "print 'On \(machine.name), over ssh from this Mac'\nssh -t \(ssh) \"\(shell)\""
+}
+
+/// The same for a command the app runs by itself (`Action.run`): nothing to read a first line, and
+/// ssh may not ask for anything, since there is nobody to answer.
+func quietly(_ machine: Machine, _ command: String) -> String {
+    let shell = "zsh -lic '\(command)'"
+    guard let ssh = machine.ssh else { return shell }
+    return "ssh -o BatchMode=yes -o ConnectTimeout=10 \(ssh) \"\(shell)\""
 }
 
 enum Fetched {
@@ -501,10 +510,10 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
         groups.more.append(unread("Fan profile", status.cooling?.error))
     }
     for stopped in status.containers.items ?? [] where stopped.state != "running" {
-        groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .terminal(command: onMac(machine, "docker start \(stopped.name)"))))
+        groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .run("Start \(stopped.name)", command: quietly(machine, "docker start \(stopped.name)"))))
     }
     if backup.automatic == true {
-        groups.actions.append(Row(title: "Back Up Now", symbol: "clock.arrow.circlepath", action: .terminal(command: onMac(machine, "tmutil startbackup && print started"))))
+        groups.actions.append(Row(title: "Back Up Now", symbol: "clock.arrow.circlepath", action: .run("Back Up Now", command: quietly(machine, "tmutil startbackup"))))
     }
     groups.actions.append(Row(title: "Clean Up Disk…", action: .claude(prompt: cleanUpPrompt(machine))))
     groups.actions.append(Row(title: "Free Up Memory…", action: .claude(prompt: memoryPrompt(machine))))
@@ -516,7 +525,7 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     return groups
 }
 
-let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale up && print connected"
+let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale up"
 
 /// What can still be done to another Mac that did not answer. `online` is what this Mac's
 /// Tailscale says about it, nil when that is not known.
@@ -526,14 +535,14 @@ func reach(_ machine: Machine, online: Bool?) -> [Row] {
         // With its Tailscale off, only a route over its own network reaches it.
         guard let lan = machine.lan else { return [] }
         return [Row(title: "Reconnect Tailscale", symbol: "network",
-                    action: .terminal(command: "print 'On \(machine.name), over its own network (ssh \(lan))'\nssh -t \(lan) '\(tailscaleUp)'"))]
+                    action: .run("Reconnect Tailscale", command: "ssh -o BatchMode=yes -o ConnectTimeout=10 \(lan) '\(tailscaleUp)'"))]
     }
     var rows = [Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)),
                 Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)"))]
     if online == true {
         // The dollar sign is escaped so the user number is worked out on that Mac.
         rows.append(Row(title: "Restart Helper", symbol: "arrow.clockwise",
-                        action: .terminal(command: onMac(machine, "launchctl kickstart -k gui/\\$(id -u)/com.chetangoel.fleetd && print restarted"))))
+                        action: .run("Restart Helper", command: quietly(machine, "launchctl kickstart -k gui/\\$(id -u)/com.chetangoel.fleetd"))))
     }
     return rows
 }
@@ -562,7 +571,7 @@ func containerRows(_ items: [Status.Container], on machine: Machine) -> [Row] {
         let address = up ? machine.ssh.flatMap { host in item.ports?.first { $0 != 6881 }.map { "\(host):\($0)" } } : nil
         return Row(title: item.name, value: address ?? (up ? "" : item.state), level: up ? nil : .bad, dot: up ? .ok : .bad,
                    note: item.status,
-                   extras: [Row(title: up ? "Restart" : "Start", action: .terminal(command: onMac(machine, "docker \(up ? "restart" : "start") \(item.name)"))),
+                   extras: [Row(title: up ? "Restart" : "Start", action: .run("\(up ? "Restart" : "Start") \(item.name)", command: quietly(machine, "docker \(up ? "restart" : "start") \(item.name)"))),
                             Row(title: "Show Logs", action: .terminal(command: onMac(machine, "docker logs --tail 200 -f \(item.name)")))],
                    action: address.flatMap { URL(string: "http://\($0)") }.map { .open($0) })
     }
@@ -628,7 +637,7 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
         alerts += mine(found.map { Row(title: $0.subject, value: $0.detail, level: $0.level, dot: $0.level) })
         if machine.ssh == nil, status.tailnet?.running == false {
             alerts += mine([Row(title: "Connect Tailscale", value: "off on this Mac", level: .bad, dot: .bad,
-                                action: .terminal(command: onMac(machine, tailscaleUp)))])
+                                action: .run("Connect Tailscale", command: quietly(machine, tailscaleUp)))])
         }
         macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: details(status, on: machine, now: now).flyout)])
 
@@ -695,6 +704,7 @@ func dump(_ rows: [Row], indent: String = "") -> String {
         case .open(let url): "  →  opens \(url.absoluteString)"
         case .claude(let prompt): "  →  Claude prompt (\(prompt.count) characters)"
         case .terminal(let command): "  →  Terminal: \(command)"
+        case .run(_, let command): "  →  runs: \(command)"
         case .window: "  →  opens the window"
         case .login: "  →  turns opening at login on or off"
         case .quit: "  →  quits"
@@ -896,6 +906,29 @@ func carryOut(_ action: Action) {
         var link = URLComponents(string: "claude://code/new")!
         link.queryItems = [URLQueryItem(name: "q", value: prompt)]
         if let url = link.url { NSWorkspace.shared.open(url) }
+    case .run(let name, let command):
+        // No window and nothing said when it works: the status asked for afterwards shows the change.
+        // When it fails, what the command printed is the explanation.
+        let process = Process(), output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-c", command]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = output
+        process.standardError = output
+        process.terminationHandler = { finished in
+            let said = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            DispatchQueue.main.async {
+                fleet.refresh()
+                guard finished.terminationStatus != 0 else { return }
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "\(name) did not work"
+                alert.informativeText = said.isEmpty ? "The command ended with status \(finished.terminationStatus)." : String(said.suffix(600))
+                NSApp.activate(ignoringOtherApps: true)
+                alert.runModal()
+            }
+        }
+        do { try process.run() } catch { NSAlert(error: error).runModal() }
     case .terminal(let command):
         // Opening a .command file runs it in a Terminal window, without asking for permission to control Terminal.
         let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("com.chetangoel.fleet")
