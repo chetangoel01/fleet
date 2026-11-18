@@ -204,7 +204,15 @@ That night also found a crash: the first time a tool ran past its deadline, the 
 - `fleetd --once` prints one status document and exits, without listening.
 - Started by launchd, the helper writes to `~/Library/Logs/fleetd.log` only when it cannot start.
 
-What the cask was checked for on m5-macbook on 2026-11-18, with the notarized 0.1.0 image installed from a local copy of the cask: after the install and the `launchctl bootstrap` line the helper answered with every reading in the same state as the script-installed copy before it; a reinstall (the path an upgrade takes) left a new helper process answering and quit the menu bar app; an uninstall left no helper running 35 seconds later, past launchd's 30-second restart interval, and no launchd file.
+What was checked on 2026-11-18, all on m5-macbook with releases installed from the tap:
+
+- **First install (0.1.0).** After the `launchctl bootstrap` line macOS showed its Open prompt, and the helper answered once it was clicked, with every reading in the same state as the script-installed copy before it. On mini the same install was done over ssh with the screen locked: the prompt went up behind the lock and the helper was still held there when this was written. m1-server had not been moved to the cask yet.
+- **Upgrade from a release without the self-restart (0.1.0 to 0.1.1).** No prompt, the approval mark was on the new copy, and Homebrew reopened the menu bar app. The 0.1.0 helper kept running until `launchctl kickstart -k gui/$(id -u)/com.chetangoel.fleetd`; a Mac still on 0.1.0 needs that one command after upgrading.
+- **Upgrade between two releases with it (0.1.1 to 0.1.2).** Nothing was run after `brew upgrade`: no prompt, the app reopened, and a new helper process answered as 0.1.2 16 seconds after Homebrew finished.
+- **The helper's wait**, with a scratch copy under a temporary launchd job: replaced by a copy flagged as downloaded and not approved, it kept running for 50 seconds; with the flag removed it left and launchd started the new copy.
+- **Uninstall (0.1.0, from a local copy of the cask).** No helper running 35 seconds later, past launchd's 30-second restart interval, and no launchd file.
+
+Why the helper restarts itself: the cask's install steps run before Homebrew marks the new copy approved, so a helper the cask restarted came up unapproved and waited for the prompt on every upgrade. Not checked: an upgrade on a Mac whose copy was never approved, and the login item starting the app at login.
 
 ## What it costs
 
