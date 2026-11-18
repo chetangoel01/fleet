@@ -415,6 +415,7 @@ struct Details {
     var more: [Row] = []        // background: swap, the busiest process, what keeps it awake, uptime
     var storage: [Row] = []     // drives and the last backup
     var actions: [Row] = []     // what can be done to this Mac
+    var fan: Row?               // this Mac's fan profile and the choices: on the menu's first screen, and a button in the window
     var flyout: [Row] { now + more + [.separator] + storage + [.separator] + actions }
 }
 
@@ -503,7 +504,7 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
         let current = fanProfile(cooling)
         // Switching is offered on this Mac only: no other Mac has Cooler's switching script yet.
         if machine.ssh == nil, cooling.switchable == true {
-            groups.actions.append(Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(current: current, on: machine)))
+            groups.fan = Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(current: current, on: machine))
         } else {
             groups.more.append(Row(title: "Fan profile", value: current, note: cooling.reason))
         }
@@ -606,6 +607,7 @@ func jobRows(_ status: Status, on machine: Machine, now: Date) -> (rows: [Row], 
 /// `pending` names the Macs asked again and not yet heard from. Their rows are dimmed.
 func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: Date) -> Contents {
     var alerts: [Row] = [], macs: [Row] = [], services: [Row] = [], downloads: [Row] = [], scheduled: [Row] = []
+    var fan: [Row] = []         // this Mac's fan profile, on the first screen since there is no other Mac it could mean
     var containers = 0, running = 0, active = 0, speed = 0.0, jobs = 0, failures = 0
     var stopped: [Row] = []
     var qbittorrent: URL?
@@ -641,7 +643,9 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
             alerts += mine([Row(title: "Connect Tailscale", value: "off on this Mac", level: .bad, dot: .bad,
                                 action: .terminal(command: onMac(machine, tailscaleUp)))])
         }
-        macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: details(status, on: machine, now: now).flyout)])
+        let groups = details(status, on: machine, now: now)
+        macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: groups.flyout)])
+        if var row = groups.fan { row.symbol = nil; fan += mine([row]) }    // no icon, to line up with the rows above it
 
         if let items = status.containers.items, !items.isEmpty {
             let rows = (dockerHosts > 1 ? [.header(machine.name)] : []) + containerRows(items, on: machine)
@@ -689,6 +693,7 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
         rows.append(Row(title: "Scheduled jobs", value: failures > 0 ? "\(jobs) · \(failures) failed" : "\(jobs)", level: failures > 0 ? .warn : nil,
                         children: scheduled, dim: scheduled.contains { $0.dim }))
     }
+    rows += fan
     rows += [.separator, Row(title: "Sync Assistant Setup…", action: .claude(prompt: syncPrompt)),
              Row(title: "Open Fleet Window", action: .window), Row(title: "Open at Login", action: .login),
              Row(title: "Quit Fleet", action: .quit)]

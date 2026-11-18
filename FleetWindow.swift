@@ -281,7 +281,7 @@ struct MacPage: View {
                 }
                 // Everything that can be done to this Mac, wrapping to as many lines as the window needs.
                 Flow(spacing: 8) {
-                    ForEach(groups.actions, id: \.title) { row in
+                    ForEach(groups.actions + [groups.fan].compactMap { $0 }, id: \.title) { row in
                         if row.children.isEmpty {
                             Button { row.action.map(carryOut) } label: {
                                 Label(row.title, systemImage: row.symbol ?? row.action?.symbol ?? "")
