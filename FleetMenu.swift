@@ -118,9 +118,10 @@ let machines: [Machine] = {
     if let flag = CommandLine.arguments.firstIndex(of: "--status"), let file = CommandLine.arguments.dropFirst(flag + 1).first {
         return [Machine(name: "saved status", url: URL(fileURLWithPath: file), server: true)]
     }
-    let here = SCDynamicStoreCopyComputerName(nil, nil) as String? ?? ""
+    // Either of this Mac's names will do: macOS can add " (2)" to the computer name by itself, as it did on m1-server.
+    let here = [SCDynamicStoreCopyComputerName(nil, nil) as String?, SCDynamicStoreCopyLocalHostName(nil) as String?]
     return ["m1-server", "mini", "m5-macbook"].map { name in
-        name == here
+        here.contains(name)
             ? Machine(name: name, url: URL(string: "http://127.0.0.1:4790/status")!, server: name == "m1-server")
             : Machine(name: name, url: URL(string: "http://\(name):4791/status")!, ssh: name, lan: name == "m1-server" ? "m1-server-lan" : nil,
                       sleeps: name != "m1-server", server: name == "m1-server")
@@ -508,7 +509,7 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     }
     if let cooling = status.cooling, cooling.state == "ok" {
         let current = fanProfile(cooling)
-        // Switching is offered on this Mac only: no other Mac has Cooler's switching script yet.
+        // Switching is offered on the Mac Fleet runs on: its fans are the ones the first screen can mean.
         if machine.ssh == nil, cooling.switchable == true {
             groups.fan = Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(current: current, on: machine))
         } else {
