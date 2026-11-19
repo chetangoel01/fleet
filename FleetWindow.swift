@@ -125,13 +125,17 @@ struct FleetWindow: View {
                     }
                 }
                 // A badge only for what is out of the ordinary: stopped containers, running downloads, failed jobs.
+                // The tag goes last: a row whose badge is added after its tag cannot be selected by a click.
                 Section("All Macs") {
-                    Label("Services", systemImage: "shippingbox").tag(Page.services)
+                    Label("Services", systemImage: "shippingbox")
                         .badge(statuses.reduce(0) { $0 + ($1.containers.items ?? []).filter { $0.state != "running" }.count })
-                    Label("Downloads", systemImage: "arrow.down.circle").tag(Page.downloads)
+                        .tag(Page.services)
+                    Label("Downloads", systemImage: "arrow.down.circle")
                         .badge(statuses.reduce(0) { $0 + ($1.downloads?.items?.count ?? 0) })
-                    Label("Scheduled jobs", systemImage: "clock").tag(Page.scheduled)
+                        .tag(Page.downloads)
+                    Label("Scheduled jobs", systemImage: "clock")
                         .badge(statuses.reduce(0) { $0 + ($1.jobs.failed ?? []).filter { !$0.running }.count })
+                        .tag(Page.scheduled)
                 }
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190)
@@ -361,7 +365,12 @@ struct MacPage: View {
             } description: {
                 Text(mac.failure == nil ? "" : "Not answering")
             } actions: {
-                if mac.failure != nil, let wake = wakeRow(mac.machine, among: Array(zip(machines, fleet.answers))) { Act(row: wake) }
+                // The rows the menu gives a Mac that is not answering: Wake, and the ways still open to reach it.
+                if mac.failure != nil {
+                    let fetched = Array(zip(machines, fleet.answers))
+                    let rows = [wakeRow(mac.machine, among: fetched)].compactMap { $0 } + reach(mac.machine, online: online(mac.machine, among: fetched))
+                    ForEach(rows, id: \.title) { Act(row: $0) }
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 400)
             .help(mac.failure ?? "")

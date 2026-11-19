@@ -6,7 +6,7 @@ options:
 settings:
   base:
     # The release's version. release.sh tags it, the cask installs it and fleetd reports it as "build".
-    MARKETING_VERSION: 0.3.0
+    MARKETING_VERSION: 0.3.1
     CURRENT_PROJECT_VERSION: 1
     ARCHS: arm64
     DEVELOPMENT_TEAM: P48VDW72LU
