@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""On-device lifecycle test of the installed controller. Root required. Temporarily stops and
+restarts only Cooler, and needs a curve in force (not Automatic). It ships in Fleet.app:
+    sudo /usr/bin/python3 /Applications/Fleet.app/Contents/Resources/Cooler/live.py
+The report is written to /var/log/cooler-live-report.json."""
+import datetime, json, os, pathlib, re, signal, subprocess, sys, time
+base = pathlib.Path('/Library/Application Support/Cooler')
+exe = str(base/'cooler')
+service = 'system/com.chetangoel.cooler'
+plist = '/Library/LaunchDaemons/com.chetangoel.cooler.plist'
+report = {'started': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'checks': [], 'observations': [],
+          'not_verified': ['physical sleep/wake', 'full reboot', 'long-term temperature/noise comfort']}
+
+def command(*args):
+    return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT)
+
+def pid():
+    text = command('/bin/launchctl', 'print', service)
+    m = re.search(r'^\s*pid = (\d+)', text, re.M)
+    return int(m[1]) if m else None
+
+def wait_active(old=None, timeout=30):
+    deadline = time.monotonic()+timeout
+    while time.monotonic() < deadline:
+        try:
+            current = pid()
+            status = json.loads((base/'status.json').read_text())
+            fresh = datetime.datetime.now(datetime.timezone.utc).timestamp()-datetime.datetime.fromisoformat(status['time'].replace('Z','+00:00')).timestamp() < 5
+            if current and current != old and status.get('pid') == current and status['mode'] == 'custom' and fresh:
+                return current, status
+        except (subprocess.CalledProcessError, ValueError, KeyError, OSError):
+            pass
+        time.sleep(1)
+    raise RuntimeError('Cooler did not return to healthy custom control')
+
+def check(name, ok, details=None):
+    report['checks'].append({'name':name, 'passed':bool(ok), 'details':details})
+    print(name+': '+('PASS' if ok else 'FAIL'), flush=True)
+    if not ok: raise RuntimeError(name)
+
+success = False
+log_path = pathlib.Path('/var/log/cooler.log')
+log_start = log_path.stat().st_size if log_path.exists() else 0
+try:
+    if os.geteuid() != 0: raise RuntimeError('Run with sudo')
+    current, status = wait_active()
+    # A fan that macOS had stopped can take fifteen seconds to turn again (seen on the M1 Max), so
+    # the reading is taken once every fan is up to speed, or after half a minute if one never is.
+    deadline = time.monotonic()+30
+    while True:
+        sample = json.loads(command(exe,'probe'))
+        values = sample['values']
+        fans, mode = range(sample['hardware']['fans']), sample['hardware']['modeKey']
+        spinning = all(1000 < values[f'F{i}Ac'] <= values[f'F{i}Mx']*1.05 for i in fans)
+        if spinning or time.monotonic() >= deadline: break
+        time.sleep(2)
+    report['observations'].append(sample)
+    check('Every fan accepts manual mode and bounded targets', all(values[f'F{i}{mode}'] == 1 and values[f'F{i}Mn'] <= values[f'F{i}Tg'] <= values[f'F{i}Mx'] for i in fans))
+    check('Every fan is physically spinning', spinning)
+    for label, sig in [('Normal termination',signal.SIGTERM), ('Controller crash',signal.SIGKILL), ('Controller stall',signal.SIGSTOP)]:
+        old = pid()
+        os.kill(old,sig)
+        time.sleep(2)
+        current,status = wait_active(old)
+        check(label+' recovers automatically', current != old, {'oldPID':old,'newPID':current})
+    old = pid()
+    child = int(command('/usr/bin/pgrep','-P',str(old),'-x','cooler').strip())
+    os.kill(child,signal.SIGKILL)
+    time.sleep(2)
+    current,status = wait_active(old)
+    check('Watchdog failure triggers controller recovery',current != old)
+    with log_path.open() as stream:
+        stream.seek(log_start)
+        log = stream.read()
+    check('Watchdog recorded automatic restoration', 'Watchdog restored automatic fan control' in log)
+    check('Stall detector fired', 'Controller heartbeat timed out' in log)
+    command('/bin/launchctl','bootout',service)
+    command(exe,'auto')
+    restored = json.loads(command(exe,'probe'))
+    report['observations'].append(restored)
+    check('Stopping restores every fan to automatic', all(restored['values'][f'F{i}{mode}'] in (0,3) for i in fans))
+    command('/bin/launchctl','bootstrap','system',plist)
+    current,status = wait_active()
+    check('Service restart reapplies custom curve', status['mode'] == 'custom')
+    check('Installed files are protected', all(p.stat().st_uid == 0 and p.stat().st_mode & 0o022 == 0 for p in [base,base/'cooler',base/'config.json',pathlib.Path(plist)]))
+    report['final_status'] = status
+    report['finished'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    success = True
+except Exception as e:
+    report['error'] = str(e)
+    report['last_status'] = json.loads((base/'status.json').read_text()) if (base/'status.json').exists() else None
+    state = subprocess.run(['/bin/launchctl','print',service],text=True,capture_output=True)
+    report['launchd_state'] = state.stdout+state.stderr
+    print('FAILED: '+str(e), flush=True)
+finally:
+    if not success:
+        subprocess.run(['/bin/launchctl','bootout',service],capture_output=True)
+        recovery = subprocess.run([exe,'auto'],text=True,capture_output=True)
+        report['failure_recovery']={'exit':recovery.returncode,'output':recovery.stdout+recovery.stderr}
+    destination=pathlib.Path('/var/log/cooler-live-report.json')
+    destination.write_text(json.dumps(report,indent=2)+'\n')
+    print('Report: '+str(destination), flush=True)
+sys.exit(0 if success else 1)

@@ -65,7 +65,7 @@ xcodebuild -exportArchive -archivePath $out/Fleet.xcarchive -exportOptionsPlist 
 app=$out/export/Fleet.app
 
 codesign --verify --deep --strict $app
-for code in $app $app/Contents/Helpers/fleetd; do
+for code in $app $app/Contents/Helpers/fleetd $app/Contents/Helpers/cooler; do
     details=$(codesign -dvv $code 2>&1)
     [[ $details == *"Authority=Developer ID Application"* ]] || { print -u2 "$code is not signed with Developer ID"; exit 1; }
     [[ $details == *"(runtime)"* ]] || { print -u2 "$code lacks the hardened runtime"; exit 1; }

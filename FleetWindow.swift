@@ -356,10 +356,15 @@ struct MacPage: View {
                 if let cooling = status.cooling { CurveEditor(machine: mac.machine, cooling: cooling, thermal: status.thermal) }
             }
         } else {
-            ContentUnavailableView(mac.machine.name, systemImage: "desktopcomputer",
-                                   description: Text(mac.failure == nil ? "" : "Not answering"))
-                .frame(maxWidth: .infinity, minHeight: 400)
-                .help(mac.failure ?? "")
+            ContentUnavailableView {
+                Label(mac.machine.name, systemImage: "desktopcomputer")
+            } description: {
+                Text(mac.failure == nil ? "" : "Not answering")
+            } actions: {
+                if mac.failure != nil, let wake = wakeRow(mac.machine, among: Array(zip(machines, fleet.answers))) { Act(row: wake) }
+            }
+            .frame(maxWidth: .infinity, minHeight: 400)
+            .help(mac.failure ?? "")
         }
     }
 

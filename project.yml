@@ -6,7 +6,7 @@ options:
 settings:
   base:
     # The release's version. release.sh tags it, the cask installs it and fleetd reports it as "build".
-    MARKETING_VERSION: 0.2.8
+    MARKETING_VERSION: 0.3.0
     CURRENT_PROJECT_VERSION: 1
     ARCHS: arm64
     DEVELOPMENT_TEAM: P48VDW72LU
@@ -22,9 +22,19 @@ targets:
       - path: FleetMenu.swift
       - path: FleetWindow.swift
       - path: FleetCurves.swift
+      # What install.sh puts in place for the fan controller, as Contents/Resources/Cooler.
+      - path: cooler/Cooler
+        type: folder
+        buildPhase: resources
     dependencies:
-      # The helper travels inside the app, so one cask installs both.
+      # The helper and the fan controller travel inside the app, so one cask carries all three.
       - target: fleetd
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      - target: cooler
         embed: true
         codeSign: true
         copy:
@@ -51,4 +61,17 @@ targets:
         # A tool has no bundle, so its version goes into the binary itself.
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+  # Cooler, the root fan controller and its watchdog. Fleet only carries it: install.sh copies it
+  # to /Library/Application Support/Cooler, where launchd runs it as root.
+  cooler:
+    type: tool
+    platform: macOS
+    sources:
+      - path: cooler
+        includes: ["*.swift"]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chetangoel.cooler.controller
+        SWIFT_VERSION: "5.0"
         SKIP_INSTALL: YES

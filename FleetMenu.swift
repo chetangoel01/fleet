@@ -89,6 +89,7 @@ struct Status: Decodable {
     struct Network: Decodable {
         var state: String; var error: String?
         var downBps: Double?; var upBps: Double?; var interface: String?; var kind: String?; var address: String?; var tailscale: String?
+        var subnet: String?         // the network it is on, as "10.0.0.0/24"
     }
     /// A point a minute: unix time, CPU %, memory used %, bytes a second down, bytes a second up.
     struct History: Decodable { var points: [[Double]]? }
@@ -99,6 +100,7 @@ struct Status: Decodable {
         var state: String; var error: String?
         var running: Bool?; var switchable: Bool?; var baselineRpm: Double?; var curve: [[Double]]?; var palmCurve: [[Double]]?; var reason: String?
         var custom: Curves?; var fanLimits: [[Double]]?; var palm: Bool?
+        var install: String?        // the installer in that Mac's Fleet.app, when the controller is missing or another version
     }
     struct Curves: Decodable { var baselineRpm: Double; var curve: [[Double]]; var palmCurve: [[Double]] }
     struct Tailnet: Decodable { var state: String; var error: String?; var running: Bool?; var peers: [Peer]? }
@@ -143,6 +145,7 @@ enum Action {
     case terminal(command: String)          // in a Terminal window: a session, or output worth reading
     case run(String, command: String)       // by the app itself, with no window; the name is for the alert when it fails
     case curves(Machine)                    // the window, on that Mac's fan curve editor
+    case wake(String, command: String)      // sends the named Mac its wake packet, then asks after it as it wakes
     case window
     case login
     case quit
@@ -156,6 +159,7 @@ enum Action {
         case .terminal: "terminal"
         case .run: "bolt"
         case .curves: "slider.horizontal.3"
+        case .wake: "sunrise"
         case .window: "macwindow"
         case .login: SMAppService.mainApp.status == .enabled ? "checkmark.circle" : "circle"
         case .quit: "power"
@@ -550,6 +554,12 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     } else if status.cooling?.state == "unknown" {
         groups.more.append(unread("Fan profile", status.cooling?.error))
     }
+    if let installer = status.cooling?.install {
+        // In a Terminal window: the installer runs as root, and sudo asks for the password there.
+        let command = "sudo \(quoted(installer))"
+        groups.actions.append(Row(title: status.cooling?.state == "none" ? "Install Fan Control…" : "Update Fan Control…", symbol: "fan",
+                                  action: .terminal(command: machine.ssh.map { "print 'On \(machine.name), over ssh from this Mac'\nssh -t \($0) \(quoted(command))" } ?? command)))
+    }
     for stopped in status.containers.items ?? [] where stopped.state != "running" {
         groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .run("Start \(stopped.name)", command: quietly(machine, "docker start \(stopped.name)"))))
     }
@@ -568,6 +578,72 @@ let tailscaleUp = "TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS
 
 /// What can still be done to another Mac that did not answer. `online` is what this Mac's
 /// Tailscale says about it, nil when that is not known.
+// MARK: Waking a sleeping Mac
+
+/// What waking each Mac takes, by name: the hardware address ("mac") of the connection it last
+/// answered on and the network that was ("subnet"), with that connection's interface and address
+/// so a change is noticed. Kept in this Mac's preferences.
+func links() -> [String: [String: String]] {
+    UserDefaults.standard.dictionary(forKey: "links") as? [String: [String: String]] ?? [:]
+}
+
+/// Remembers another Mac's hardware address while it answers. macOS shows that address only to its
+/// own tools, so `ifconfig` is asked over ssh: once, and again when the Mac's connection changes.
+@MainActor var learning: Set<String> = []
+@MainActor func learnLink(of machine: Machine, from status: Status) {
+    guard let ssh = machine.ssh, let network = status.network, let interface = network.interface,
+          let address = network.address, let subnet = network.subnet,
+          interface.allSatisfy({ $0.isLetter || $0.isNumber }), !learning.contains(machine.name) else { return }
+    let known = links()[machine.name]
+    guard known?["interface"] != interface || known?["address"] != address else { return }
+    learning.insert(machine.name)
+    let process = Process(), output = Pipe()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+    process.arguments = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ClearAllForwardings=yes", ssh, "/sbin/ifconfig \(interface)"]
+    process.standardInput = FileHandle.nullDevice
+    process.standardOutput = output
+    process.standardError = FileHandle.nullDevice
+    process.terminationHandler = { _ in
+        let said = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        let mac = said.firstMatch(of: /ether ([0-9a-f:]{17})/).map { String($0.1) }
+        DispatchQueue.main.async {
+            learning.remove(machine.name)
+            guard let mac else { return }
+            var all = links()
+            all[machine.name] = ["mac": mac, "subnet": subnet, "interface": interface, "address": address]
+            UserDefaults.standard.set(all, forKey: "links")
+        }
+    }
+    do { try process.run() } catch { learning.remove(machine.name) }
+}
+
+/// Whether this Mac's own Tailscale lists another Mac as online, when it can say. Online on the
+/// tailnet and silent means the Mac is up and its helper is not.
+func online(_ machine: Machine, among fetched: [(Machine, Fetched)]) -> Bool? {
+    let tailscale = fetched.lazy.compactMap { machine, result -> Status.Tailnet? in
+        if machine.ssh == nil, case .status(let status) = result { status.tailnet } else { nil }
+    }.first
+    guard machine.ssh != nil, tailscale?.running == true else { return nil }
+    return tailscale?.peers?.contains { $0.name.lowercased() == machine.name.lowercased() }
+}
+
+/// Offered for a Mac that is not answering when its hardware address is remembered and a Mac that
+/// does answer is on the network it was last on: only from there can the wake packet reach it.
+func wakeRow(_ machine: Machine, among fetched: [(Machine, Fetched)]) -> Row? {
+    // Online and silent is a helper that is down, not a Mac that is asleep.
+    guard online(machine, among: fetched) != true,
+          let link = links()[machine.name], let mac = link["mac"], let subnet = link["subnet"] else { return nil }
+    let near = fetched.compactMap { other, result -> Machine? in
+        if case .status(let status) = result, status.network?.subnet == subnet { other } else { nil }
+    }
+    guard !near.isEmpty else { return nil }
+    // Another Mac first: sent from here, macOS may first ask to let Fleet onto the local network.
+    let senders = near.filter { $0.ssh != nil }.map {
+        "ssh -o BatchMode=yes -o ConnectTimeout=10 -o ClearAllForwardings=yes \($0.ssh!) '/Applications/Fleet.app/Contents/Helpers/fleetd --wake \(mac)'"
+    } + near.filter { $0.ssh == nil }.map { _ in "\(quoted(Bundle.main.bundlePath + "/Contents/Helpers/fleetd")) --wake \(mac)" }
+    return Row(title: "Wake", action: .wake(machine.name, command: senders.joined(separator: " || ")))
+}
+
 func reach(_ machine: Machine, online: Bool?) -> [Row] {
     guard let ssh = machine.ssh else { return [] }
     if online == false {
@@ -649,24 +725,18 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
     var qbittorrent: URL?
     let dockerHosts = fetched.filter { if case .status(let status) = $0.1 { status.containers.items?.isEmpty == false } else { false } }.count
 
-    // What this Mac's own Tailscale reports: whether it is connected, and which devices are online.
-    let tailscale = fetched.lazy.compactMap { machine, result -> Status.Tailnet? in
-        if machine.ssh == nil, case .status(let status) = result { status.tailnet } else { nil }
-    }.first
-
     for (machine, result) in fetched {
         func mine(_ rows: [Row]) -> [Row] { pending.contains(machine.name) ? dimmed(rows) : rows }
         guard case .status(let status) = result else {
             if case .failed(let reason) = result {
-                // Online on the tailnet and silent means the Mac is up and its helper is not.
-                let online = machine.ssh == nil || tailscale?.running != true
-                    ? nil : tailscale?.peers?.contains { $0.name.lowercased() == machine.name.lowercased() }
+                let online = online(machine, among: fetched)
                 let what = online == true ? "helper not answering" : online == false ? "offline" : "not answering"
                 let expected = machine.sleeps && online != true
                 if !expected {
                     alerts += mine([Row(title: machine.name, value: what, level: .bad, dot: .bad, note: reason)])
                 }
-                macs += mine([Row(title: machine.name, value: what, dot: expected ? .off : .bad, note: reason, children: reach(machine, online: online))])
+                macs += mine([Row(title: machine.name, value: what, dot: expected ? .off : .bad, note: reason,
+                                  children: [wakeRow(machine, among: fetched)].compactMap { $0 } + reach(machine, online: online))])
             } else {
                 macs.append(Row(title: machine.name, dot: .off))
             }
@@ -749,7 +819,7 @@ func dump(_ rows: [Row], indent: String = "") -> String {
         case .open(let url): "  →  opens \(url.absoluteString)"
         case .claude(let prompt): "  →  Claude prompt (\(prompt.count) characters)"
         case .terminal(let command): "  →  Terminal: \(command)"
-        case .run(_, let command): "  →  runs: \(command)"
+        case .run(_, let command), .wake(_, let command): "  →  runs: \(command)"
         case .curves(let machine): "  →  opens \(machine.name)'s fan curve editor"
         case .window: "  →  opens the window"
         case .login: "  →  turns opening at login on or off"
@@ -912,6 +982,7 @@ final class Fleet {
                 let answer = await fetch(machines[index])
                 guard asked[index] == ask else { return }      // asked again since: that answer is the one to show
                 answers[index] = answer
+                if case .status(let status) = answer { learnLink(of: machines[index], from: status) }
                 pending.remove(index)
                 answeredAt = Date()
                 changed()
@@ -980,6 +1051,12 @@ func carryOut(_ action: Action) {
         if let url = link.url { NSWorkspace.shared.open(url) }
     case .run(let name, let command):
         runQuietly(name, command)
+    case .wake(let name, let command):
+        // A Mac takes some seconds to wake and to rejoin the tailnet, so it is asked after a few times.
+        runQuietly("Wake \(name)", command) { worked in
+            guard worked else { return }
+            for wait in [8.0, 20, 40] { DispatchQueue.main.asyncAfter(deadline: .now() + wait) { fleet.refresh() } }
+        }
     case .curves(let machine):
         shown.curves = machine.name
         openWindow(.machine(machine.name))

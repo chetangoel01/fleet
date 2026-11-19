@@ -13,6 +13,7 @@ import SystemConfiguration
 var port: UInt16 = 4790
 var dockerSocketOverride: String?
 var once = false
+var waking: String?
 /// The release this helper came from, which Xcode writes into the binary from project.yml.
 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
 
@@ -22,6 +23,7 @@ while let argument = arguments.next() {
     case "--port": port = UInt16(arguments.next() ?? "") ?? port
     case "--docker-socket": dockerSocketOverride = arguments.next()
     case "--once": once = true
+    case "--wake": waking = arguments.next() ?? ""
     default:
         FileHandle.standardError.write(Data("fleetd: unknown argument \(argument)\n".utf8))
         exit(2)
@@ -432,6 +434,37 @@ func holdOrRelease() {
     }
 }
 
+/// Sends the packet that wakes a sleeping Mac: six 0xFF bytes, then its hardware address sixteen
+/// times, to everyone on each network this Mac is on, three times over since nothing confirms a
+/// broadcast arrived. Only a Mac on the sleeper's own network can deliver it. Returns why it could not.
+func wake(_ address: String) -> String? {
+    let bytes = address.split(separator: ":", omittingEmptySubsequences: false).compactMap { $0.count == 2 ? UInt8($0, radix: 16) : nil }
+    guard bytes.count == 6, address.count == 17 else { return "\"\(address)\" is not a hardware address" }
+    let packet = [UInt8](repeating: 0xFF, count: 6) + [[UInt8]](repeating: bytes, count: 16).joined()
+    let everyone = counts().broadcasts
+    guard !everyone.isEmpty else { return "this Mac is on no network" }
+    let socket = Darwin.socket(AF_INET, SOCK_DGRAM, 0)
+    defer { close(socket) }
+    var on: Int32 = 1
+    setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &on, socklen_t(MemoryLayout<Int32>.size))
+    var refused: String?
+    for round in 0..<3 {
+        if round > 0 { usleep(100_000) }
+        for network in everyone {
+            var to = sockaddr_in()
+            to.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            to.sin_family = sa_family_t(AF_INET)
+            to.sin_port = UInt16(9).bigEndian      // "discard", where wake packets are sent by custom
+            inet_pton(AF_INET, network, &to.sin_addr)
+            let sent = withUnsafePointer(to: &to) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sendto(socket, packet, packet.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
+            }
+            if sent != packet.count { refused = "sending to \(network): \(String(cString: strerror(errno)))" }
+        }
+    }
+    return refused
+}
+
 /// Carries out "POST /awake/on", "POST /awake/on?minutes=120" or "POST /awake/off", and says whether
 /// the request was one of them. It must carry an X-Fleet header and no Origin. A web page cannot add
 /// the header without first asking the helper's leave, which is never given, and a browser puts
@@ -454,11 +487,34 @@ func awakeCommand(_ lines: [String]) -> Bool {
     return true
 }
 
+/// The installer of the fan controller Fleet.app carries, when running it would change something:
+/// Cooler is not installed and could run this Mac's fans, or the installed copy is another version.
+func carriedInstaller(beside folder: String) -> String? {
+    guard let helpers = Bundle.main.executableURL?.resolvingSymlinksInPath().deletingLastPathComponent() else { return nil }
+    let carried = helpers.deletingLastPathComponent().appendingPathComponent("Resources/Cooler")
+    let installer = carried.appendingPathComponent("install.sh").path
+    guard FileManager.default.isExecutableFile(atPath: installer),
+          let version = try? String(contentsOf: carried.appendingPathComponent("version"), encoding: .utf8) else { return nil }
+    if FileManager.default.isExecutableFile(atPath: folder + "/cooler") {
+        return (try? String(contentsOfFile: folder + "/version", encoding: .utf8)) == version ? nil : installer
+    }
+    // The controller's own read-only check says whether it knows this Mac's sensors and fans. Asked once: hardware does not change.
+    if canCool == nil {
+        let checked = try? run(helpers.appendingPathComponent("cooler").path, ["check", carried.appendingPathComponent("config.json").path], timeout: 3)
+        canCool = checked?.contains("\"mode\":\"custom\"") == true
+    }
+    return canCool == true ? installer : nil
+}
+var canCool: Bool?
+
 /// Cooler, the fan controller, where it is installed: whether its controller is running and the
 /// curve it is set to. The helper only reads; switching goes through Cooler's own root script.
 func cooling() -> [String: Any] {
     let folder = "/Library/Application Support/Cooler"
-    guard FileManager.default.isExecutableFile(atPath: folder + "/cooler") else { return ["state": "none"] }
+    let installer = carriedInstaller(beside: folder)
+    guard FileManager.default.isExecutableFile(atPath: folder + "/cooler") else {
+        return installer.map { ["state": "none", "install": $0] } ?? ["state": "none"]
+    }
     func object(_ file: String) -> [String: Any]? {
         FileManager.default.contents(atPath: folder + "/" + file).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
     }
@@ -477,6 +533,7 @@ func cooling() -> [String: Any] {
     var result: [String: Any] = ["state": "ok", "running": pid != nil, "baseline_rpm": Int(baseline), "curve": curve, "palm_curve": palm,
                                  "switchable": FileManager.default.isExecutableFile(atPath: folder + "/apply-profile")]
     if let pid, let status = object("status.json"), status["pid"] as? Int == pid { result["reason"] = status["reason"] }
+    if let installer { result["install"] = installer }
     // The curve last applied from Fleet's editor, kept by this Mac's user so every Mac's Fleet offers the same one.
     let saved = NSHomeDirectory() + "/Library/Application Support/Cooler/custom.json"
     if let custom = FileManager.default.contents(atPath: saved).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }),
@@ -673,6 +730,14 @@ struct Counts {
     var cores: [(busy: UInt32, total: UInt32)] = []     // ticks, per core
     var received: UInt32 = 0, sent: UInt32 = 0          // bytes, across the en interfaces
     var addresses: [String: String] = [:]               // interface: its IPv4 address
+    var subnets: [String: String] = [:]                 // interface: the network it is on, as "10.0.0.0/24"
+    var broadcasts: [String] = []                       // the address that reaches everyone on each en interface's network
+}
+
+func numeric(_ address: UnsafePointer<sockaddr>) -> String? {
+    var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+    return getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0
+        ? String(cString: host) : nil
 }
 
 func counts() -> Counts {
@@ -701,9 +766,16 @@ func counts() -> Counts {
             found.received &+= bytes.ifi_ibytes
             found.sent &+= bytes.ifi_obytes
         } else if address.pointee.sa_family == UInt8(AF_INET) {
-            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-            if getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                found.addresses[name] = String(cString: host)
+            found.addresses[name] = numeric(address)
+            if let mask = current.pointee.ifa_netmask {
+                let bits = UnsafeRawPointer(mask).load(as: sockaddr_in.self).sin_addr.s_addr
+                var network = UnsafeRawPointer(address).load(as: sockaddr_in.self)
+                network.sin_addr.s_addr &= bits
+                let start = withUnsafePointer(to: &network) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { numeric($0) } }
+                found.subnets[name] = start.map { "\($0)/\(bits.nonzeroBitCount)" }
+            }
+            if name.hasPrefix("en"), current.pointee.ifa_flags & UInt32(IFF_BROADCAST) != 0, let everyone = current.pointee.ifa_dstaddr {
+                found.broadcasts += [numeric(everyone)].compactMap { $0 }
             }
         }
     }
@@ -775,6 +847,7 @@ func loadAndNetwork() -> (cpu: [String: Any], network: [String: Any]) {
     if let primary = global?["PrimaryInterface"] as? String {
         network["interface"] = primary
         network["address"] = now.addresses[primary]
+        network["subnet"] = now.subnets[primary]
         let known = (SCNetworkInterfaceCopyAll() as? [SCNetworkInterface]) ?? []
         if let match = known.first(where: { SCNetworkInterfaceGetBSDName($0) as String? == primary }) {
             network["kind"] = SCNetworkInterfaceGetLocalizedDisplayName(match) as String?
@@ -923,6 +996,16 @@ func handle(_ connection: NWConnection) {
         let head = "HTTP/1.1 \(code)\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
         connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }
+}
+
+// "fleetd --wake aa:bb:cc:dd:ee:ff" sends that Mac its wake packet and leaves. Fleet runs it, over
+// ssh where need be, on a Mac that shares the sleeper's network.
+if let waking {
+    if let problem = wake(waking) {
+        FileHandle.standardError.write(Data("fleetd: \(problem)\n".utf8))
+        exit(1)
+    }
+    exit(0)
 }
 
 if once {
