@@ -77,7 +77,7 @@ struct Status: Decodable {
     }
     struct Kept: Decodable { var on: Bool; var until: Date? }
     struct Holder: Decodable { var process: String }
-    struct Thermal: Decodable { var state: String; var error: String?; var cpuC: Double?; var fansRpm: [Double]? }
+    struct Thermal: Decodable { var state: String; var error: String?; var cpuC: Double?; var gpuC: Double?; var palmC: Double?; var fansRpm: [Double]? }
     struct TimeMachine: Decodable { var state: String; var error: String?; var latest: Date?; var automatic: Bool?; var destinations: [String]? }
     struct Brew: Decodable { var state: String; var error: String?; var outdated: Int?; var names: [String]? }
     struct Downloads: Decodable { var state: String; var error: String?; var items: [Download]? }
@@ -93,10 +93,14 @@ struct Status: Decodable {
     /// A point a minute: unix time, CPU %, memory used %, bytes a second down, bytes a second up.
     struct History: Decodable { var points: [[Double]]? }
     /// Cooler's fan control. `curve` and `palmCurve` are points of temperature and fan demand (0 to 1).
+    /// `custom` is the curve last applied from the editor, `fanLimits` each fan's slowest and fastest speed, and
+    /// `palm` whether the Mac has palm rest sensors for the second curve to follow.
     struct Cooling: Decodable {
         var state: String; var error: String?
         var running: Bool?; var switchable: Bool?; var baselineRpm: Double?; var curve: [[Double]]?; var palmCurve: [[Double]]?; var reason: String?
+        var custom: Curves?; var fanLimits: [[Double]]?; var palm: Bool?
     }
+    struct Curves: Decodable { var baselineRpm: Double; var curve: [[Double]]; var palmCurve: [[Double]] }
     struct Tailnet: Decodable { var state: String; var error: String?; var running: Bool?; var peers: [Peer]? }
     struct Peer: Decodable { var name: String; var direct: Bool; var active: Bool; var relay: String }
 }
@@ -138,6 +142,7 @@ enum Action {
     case claude(prompt: String)
     case terminal(command: String)          // in a Terminal window: a session, or output worth reading
     case run(String, command: String)       // by the app itself, with no window; the name is for the alert when it fails
+    case curves(Machine)                    // the window, on that Mac's fan curve editor
     case window
     case login
     case quit
@@ -150,6 +155,7 @@ enum Action {
         case .claude: "bubble.left"
         case .terminal: "terminal"
         case .run: "bolt"
+        case .curves: "slider.horizontal.3"
         case .window: "macwindow"
         case .login: SMAppService.mainApp.status == .enabled ? "checkmark.circle" : "circle"
         case .quit: "power"
@@ -159,15 +165,26 @@ enum Action {
 
 /// One of Cooler's fan profiles: the speed the fans idle at, then fan demand (0 to 1 of the range
 /// above that) against the chip's temperature and the palm rest's.
-struct FanProfile {
+struct FanProfile: Equatable {
     var name: String; var baseline: Int; var chip: [[Double]]; var palm: [[Double]]
 
     /// What Cooler's `apply-profile curve` reads.
     var edit: String {
         func points(_ curve: [[Double]]) -> String {
-            "[" + curve.map { "{\"temperature\":\(Int($0[0])),\"fraction\":\($0[1])}" }.joined(separator: ",") + "]"
+            "[" + curve.map { "{\"temperature\":\($0[0].formatted(.number.grouping(.never))),\"fraction\":\($0[1])}" }.joined(separator: ",") + "]"
         }
         return "{\"baselineRPM\":\(baseline),\"curve\":\(points(chip)),\"palmCurve\":\(points(palm))}"
+    }
+}
+
+extension Status.Cooling {
+    /// The curve in force, or the one last set while macOS runs the fans.
+    var installed: FanProfile? {
+        guard let baselineRpm, let curve, let palmCurve else { return nil }
+        return FanProfile(name: "Installed", baseline: Int(baselineRpm), chip: curve, palm: palmCurve)
+    }
+    var saved: FanProfile? {
+        custom.map { FanProfile(name: "Custom", baseline: Int($0.baselineRpm), chip: $0.curve, palm: $0.palmCurve) }
     }
 }
 
@@ -188,19 +205,35 @@ func fanProfile(_ cooling: Status.Cooling) -> String {
     return fanProfiles.first { Double($0.baseline) == cooling.baselineRpm && same(cooling.curve, $0.chip) && same(cooling.palmCurve, $0.palm) }?.name ?? "Custom"
 }
 
-/// The rows that switch this Mac's fans. Cooler's root script does the switching, and its sudo
-/// rule lets an admin run it without a password; it prints why when it refuses.
-func fanChoices(current: String, on machine: Machine) -> [Row] {
-    let script = "sudo -n '/Library/Application Support/Cooler/apply-profile'"
+/// Text as one word for a shell.
+func quoted(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+
+/// Cooler's root script does the switching, and its sudo rule lets an admin run it without a
+/// password; it prints why when it refuses.
+let applyProfile = "sudo -n '/Library/Application Support/Cooler/apply-profile'"
+
+/// A command that switches a Mac's fans, run there: over ssh for another Mac. A curve goes in on standard input.
+func fanCommand(_ machine: Machine, _ script: String, curve: FanProfile? = nil) -> String {
+    // In braces here, so a curve piped in reaches every command of the script and not only its first.
+    let there = machine.ssh.map { "ssh -o BatchMode=yes -o ConnectTimeout=10 -o ClearAllForwardings=yes \($0) \(quoted(script))" } ?? "{ \(script); }"
+    return curve.map { "print -r -- \(quoted($0.edit)) | \(there)" } ?? there
+}
+
+/// Applies a curve from the editor and keeps it as that Mac's Custom profile, only once Cooler has taken it.
+func customCommand(_ machine: Machine, _ curve: FanProfile) -> String {
+    fanCommand(machine, """
+        f="$HOME/Library/Application Support/Cooler/custom.json"; mkdir -p "$(dirname "$f")" && cat > "$f.new" && \(applyProfile) curve < "$f.new" && mv "$f.new" "$f" || { rm -f "$f.new"; exit 1; }
+        """, curve: curve)
+}
+
+/// The rows that switch a Mac's fans, then the way into the curve editor.
+func fanChoices(_ cooling: Status.Cooling, current: String, on machine: Machine) -> [Row] {
     func row(_ name: String, _ command: String) -> Row {
         Row(title: name, symbol: name == current ? "checkmark.circle" : "circle", action: .run("Fan Profile: \(name)", command: command))
     }
-    var rows = [row("Automatic", "\(script) automatic")]
-    rows += fanProfiles.map { row($0.name, "print -r -- '\($0.edit)' | \(script) curve") }
-    // The curve last saved in Cooler's editor.
-    let saved = NSHomeDirectory() + "/Library/Application Support/Cooler/custom.json"
-    if FileManager.default.fileExists(atPath: saved) { rows.append(row("Custom", "\(script) curve < '\(saved)'")) }
-    return rows
+    var rows = [row("Automatic", fanCommand(machine, "\(applyProfile) automatic"))]
+    rows += (fanProfiles + [cooling.saved].compactMap { $0 }).map { row($0.name, fanCommand(machine, "\(applyProfile) curve", curve: $0)) }
+    return rows + [.separator, Row(title: "Edit Curve…", action: .curves(machine))]
 }
 
 func place(_ machine: Machine) -> String {
@@ -417,7 +450,7 @@ struct Details {
     var storage: [Row] = []     // drives and the last backup
     var quick: [Row] = []       // what is done to a Mac most, drawn as icons in the window: share its screen, open a terminal, keep it awake, back it up
     var actions: [Row] = []     // the rest of what can be done to this Mac
-    var fan: Row?               // this Mac's fan profile and the choices: on the menu's first screen, and beside the icons in the window
+    var fan: Row?               // the Mac's fan profile and the choices: beside the buttons in the window; in the menu, on the first screen for this Mac and in the flyout for another
     /// In the menu a choice is spread out, each option a row of its own.
     var flyout: [Row] { now + more + [.separator] + storage + [.separator] + quick.flatMap { $0.children.isEmpty ? [$0] : $0.children } + actions }
 }
@@ -509,9 +542,8 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     }
     if let cooling = status.cooling, cooling.state == "ok" {
         let current = fanProfile(cooling)
-        // Switching is offered on the Mac Fleet runs on: its fans are the ones the first screen can mean.
-        if machine.ssh == nil, cooling.switchable == true {
-            groups.fan = Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(current: current, on: machine))
+        if cooling.switchable == true {
+            groups.fan = Row(title: "Fan Profile", value: current, note: cooling.reason, symbol: "fan", children: fanChoices(cooling, current: current, on: machine))
         } else {
             groups.more.append(Row(title: "Fan profile", value: current, note: cooling.reason))
         }
@@ -648,8 +680,10 @@ func menuRows(_ fetched: [(Machine, Fetched)], pending: Set<String> = [], now: D
                                 action: .terminal(command: onMac(machine, tailscaleUp)))])
         }
         let groups = details(status, on: machine, now: now)
-        macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: groups.flyout)])
-        if var row = groups.fan { row.symbol = nil; fan += mine([row]) }    // no icon, to line up with the rows above it
+        // This Mac's fan profile goes on the first screen, where there is no other Mac it could mean; another Mac's in its flyout.
+        let ownFan = machine.ssh == nil ? [] : [groups.fan].compactMap { $0 }
+        macs += mine([Row(title: machine.name, value: summary(status), dot: ownLevel(found, on: machine), children: groups.flyout + ownFan)])
+        if machine.ssh == nil, var row = groups.fan { row.symbol = nil; fan += mine([row]) }    // no icon, to line up with the rows above it
 
         if let items = status.containers.items, !items.isEmpty {
             let rows = (dockerHosts > 1 ? [.header(machine.name)] : []) + containerRows(items, on: machine)
@@ -716,6 +750,7 @@ func dump(_ rows: [Row], indent: String = "") -> String {
         case .claude(let prompt): "  →  Claude prompt (\(prompt.count) characters)"
         case .terminal(let command): "  →  Terminal: \(command)"
         case .run(_, let command): "  →  runs: \(command)"
+        case .curves(let machine): "  →  opens \(machine.name)'s fan curve editor"
         case .window: "  →  opens the window"
         case .login: "  →  turns opening at login on or off"
         case .quit: "  →  quits"
@@ -888,6 +923,32 @@ final class Fleet {
 
 let fleet = Fleet()
 
+/// Runs a command with no window, and nothing said when it works: the status asked for afterwards
+/// shows the change. When it fails, what the command printed is the explanation. `then` hears how it went.
+func runQuietly(_ name: String, _ command: String, then: (@MainActor (Bool) -> Void)? = nil) {
+    let process = Process(), output = Pipe()
+    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    process.arguments = ["-c", command]
+    process.standardInput = FileHandle.nullDevice
+    process.standardOutput = output
+    process.standardError = output
+    process.terminationHandler = { finished in
+        let said = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        DispatchQueue.main.async {
+            fleet.refresh()
+            then?(finished.terminationStatus == 0)
+            guard finished.terminationStatus != 0 else { return }
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "\(name) did not work"
+            alert.informativeText = said.isEmpty ? "The command ended with status \(finished.terminationStatus)." : String(said.suffix(600))
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
+    }
+    do { try process.run() } catch { then?(false); NSAlert(error: error).runModal() }
+}
+
 func carryOut(_ action: Action) {
     switch action {
     case .awake(let machine, let minutes):
@@ -918,28 +979,10 @@ func carryOut(_ action: Action) {
         link.queryItems = [URLQueryItem(name: "q", value: prompt)]
         if let url = link.url { NSWorkspace.shared.open(url) }
     case .run(let name, let command):
-        // No window and nothing said when it works: the status asked for afterwards shows the change.
-        // When it fails, what the command printed is the explanation.
-        let process = Process(), output = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        process.standardInput = FileHandle.nullDevice
-        process.standardOutput = output
-        process.standardError = output
-        process.terminationHandler = { finished in
-            let said = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            DispatchQueue.main.async {
-                fleet.refresh()
-                guard finished.terminationStatus != 0 else { return }
-                let alert = NSAlert()
-                alert.alertStyle = .warning
-                alert.messageText = "\(name) did not work"
-                alert.informativeText = said.isEmpty ? "The command ended with status \(finished.terminationStatus)." : String(said.suffix(600))
-                NSApp.activate(ignoringOtherApps: true)
-                alert.runModal()
-            }
-        }
-        do { try process.run() } catch { NSAlert(error: error).runModal() }
+        runQuietly(name, command)
+    case .curves(let machine):
+        shown.curves = machine.name
+        openWindow(.machine(machine.name))
     case .terminal(let command):
         // Opening a .command file runs it in a Terminal window, without asking for permission to control Terminal.
         let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("com.chetangoel.fleet")

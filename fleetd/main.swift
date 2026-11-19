@@ -477,7 +477,30 @@ func cooling() -> [String: Any] {
     var result: [String: Any] = ["state": "ok", "running": pid != nil, "baseline_rpm": Int(baseline), "curve": curve, "palm_curve": palm,
                                  "switchable": FileManager.default.isExecutableFile(atPath: folder + "/apply-profile")]
     if let pid, let status = object("status.json"), status["pid"] as? Int == pid { result["reason"] = status["reason"] }
+    // The curve last applied from Fleet's editor, kept by this Mac's user so every Mac's Fleet offers the same one.
+    let saved = NSHomeDirectory() + "/Library/Application Support/Cooler/custom.json"
+    if let custom = FileManager.default.contents(atPath: saved).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }),
+       let baseline = custom["baselineRPM"] as? Double, let curve = points(custom["curve"]), let palm = points(custom["palmCurve"]) {
+        result["custom"] = ["baseline_rpm": Int(baseline), "curve": curve, "palm_curve": palm]
+    }
+    if fanHardware == nil { fanHardware = readFanHardware(folder + "/cooler") }
+    if let fanHardware { result.merge(fanHardware) { old, _ in old } }
     return result
+}
+
+/// What a Mac's fans can do, which never changes: each fan's slowest and fastest speed, and
+/// whether the Mac has palm rest sensors for the second curve. Read once, from Cooler's probe.
+var fanHardware: [String: Any]?
+
+func readFanHardware(_ cooler: String) -> [String: Any]? {
+    guard let text = try? run(cooler, ["probe"], timeout: 3),
+          let sample = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
+          let values = sample["values"] as? [String: Any], let hardware = sample["hardware"] as? [String: Any] else { return nil }
+    let limits = (0..<(hardware["fans"] as? Int ?? 0)).compactMap { fan -> [Int]? in
+        guard let slowest = values["F\(fan)Mn"] as? Double, let fastest = values["F\(fan)Mx"] as? Double else { return nil }
+        return [Int(slowest), Int(fastest)]
+    }
+    return ["fan_limits": limits, "palm": (hardware["palm"] as? [String])?.isEmpty == false]
 }
 
 /// What is stopping this Mac from sleeping when idle, whether Fleet is one of those things, and
@@ -515,7 +538,10 @@ func thermal() -> [String: Any] {
        let time = (written["time"] as? String).flatMap({ ISO8601DateFormatter().date(from: $0) }),
        Date().timeIntervalSince(time) < 60, let cpu = written["cpu"] as? Double {
         let targets = (written["targets"] as? [NSNumber] ?? []).map { $0.intValue }
-        return ["state": "ok", "cpu_c": oneDecimal(cpu), "fans_rpm": targets, "source": "cooler status file"]
+        var result: [String: Any] = ["state": "ok", "cpu_c": oneDecimal(cpu), "fans_rpm": targets, "source": "cooler status file"]
+        if let gpu = written["gpu"] as? Double { result["gpu_c"] = oneDecimal(gpu) }
+        if let palm = written["palm"] as? Double { result["palm_c"] = oneDecimal(palm) }
+        return result
     }
     do {
         let text = try run(folder + "/cooler", ["probe"], timeout: 3)
@@ -525,7 +551,12 @@ func thermal() -> [String: Any] {
             throw Failure(message: "unexpected probe output")
         }
         let fans = (0..<(hardware["fans"] as? Int ?? 0)).compactMap { values["F\($0)Ac"] as? Double }.map { Int($0) }
-        return ["state": "ok", "cpu_c": oneDecimal(hottest), "fans_rpm": fans, "source": "cooler probe"]
+        var result: [String: Any] = ["state": "ok", "cpu_c": oneDecimal(hottest), "fans_rpm": fans, "source": "cooler probe"]
+        // The hottest of each group, as Cooler's controller takes them.
+        for (name, group) in [("gpu_c", "gpu"), ("palm_c", "palm")] {
+            if let hottest = ((hardware[group] as? [String]) ?? []).compactMap({ values[$0] as? Double }).max() { result[name] = oneDecimal(hottest) }
+        }
+        return result
     } catch let failure as Failure {
         return unknown(failure.message)
     } catch {

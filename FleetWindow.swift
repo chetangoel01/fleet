@@ -25,7 +25,10 @@ enum Page: Hashable {
 }
 
 @Observable
-final class Shown { var page: Page? = .overview }
+final class Shown {
+    var page: Page? = .overview
+    var curves: String?     // the Mac whose fan curve editor is open
+}
 
 let shown = Shown()
 private var window: NSWindow?
@@ -349,6 +352,9 @@ struct MacPage: View {
                 }
             }
             .dimmed(while: mac.pending)
+            .sheet(isPresented: Binding(get: { shown.curves == mac.id }, set: { if !$0 { shown.curves = nil } })) {
+                if let cooling = status.cooling { CurveEditor(machine: mac.machine, cooling: cooling, thermal: status.thermal) }
+            }
         } else {
             ContentUnavailableView(mac.machine.name, systemImage: "desktopcomputer",
                                    description: Text(mac.failure == nil ? "" : "Not answering"))
@@ -535,7 +541,11 @@ struct Act: View {
             if !row.children.isEmpty {
                 Menu {
                     ForEach(row.children, id: \.title) { choice in
-                        Button { choice.action.map(carryOut) } label: { Label(choice.title, systemImage: choice.symbol ?? "") }
+                        if choice.isSeparator {
+                            Divider()
+                        } else {
+                            Button { choice.action.map(carryOut) } label: { Label(choice.title, systemImage: choice.symbol ?? choice.action?.symbol ?? "") }
+                        }
                     }
                 } label: {
                     label

@@ -6,7 +6,7 @@ options:
 settings:
   base:
     # The release's version. release.sh tags it, the cask installs it and fleetd reports it as "build".
-    MARKETING_VERSION: 0.2.7
+    MARKETING_VERSION: 0.2.8
     CURRENT_PROJECT_VERSION: 1
     ARCHS: arm64
     DEVELOPMENT_TEAM: P48VDW72LU
@@ -21,6 +21,7 @@ targets:
     sources:
       - path: FleetMenu.swift
       - path: FleetWindow.swift
+      - path: FleetCurves.swift
     dependencies:
       # The helper travels inside the app, so one cask installs both.
       - target: fleetd
