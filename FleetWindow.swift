@@ -277,29 +277,18 @@ struct MacPage: View {
                             Text(mac.machine.name).font(.title2.weight(.semibold))
                         }
                         Text(about(status.hardware, up: up?.value)).foregroundStyle(.secondary)
-                    }
-                }
-                // Everything that can be done to this Mac, wrapping to as many lines as the window needs.
-                Flow(spacing: 8) {
-                    ForEach(groups.actions + [groups.fan].compactMap { $0 }, id: \.title) { row in
-                        if row.children.isEmpty {
-                            Button { row.action.map(carryOut) } label: {
-                                Label(row.title, systemImage: row.symbol ?? row.action?.symbol ?? "")
+                        // What is done to a Mac most, as icons.
+                        if !groups.quick.isEmpty {
+                            HStack(spacing: 6) {
+                                ForEach(groups.quick, id: \.title) { Act(row: $0, compact: true) }
                             }
-                            .help(row.note ?? "")
-                        } else {
-                            // A choice among several, such as the fan profile: the button names the one in force.
-                            Menu {
-                                ForEach(row.children, id: \.title) { choice in
-                                    Button { choice.action.map(carryOut) } label: { Label(choice.title, systemImage: choice.symbol ?? "") }
-                                }
-                            } label: {
-                                Label("\(row.title): \(row.value)", systemImage: row.symbol ?? "")
-                            }
-                            .fixedSize()
-                            .help(row.note ?? "")
+                            .padding(.top, 6)
                         }
                     }
+                }
+                // The rest of what can be done to this Mac, wrapping to as many lines as the window needs.
+                Flow(spacing: 8) {
+                    ForEach(groups.actions + [groups.fan].compactMap { $0 }, id: \.title) { Act(row: $0) }
                 }
                 .padding(.top, -8)
                 if !found.isEmpty {
@@ -529,6 +518,41 @@ struct Figure: View {
 
 /// A reading on its own ground, with a drawing beside the figure where there is something to draw:
 /// a ring for a share of something, a bar per core for load.
+/// A button for something that can be done to a Mac. `compact` draws the icon alone, named by its
+/// tooltip. A choice among several is a menu, labelled with the choice in force when there is one
+/// (the fan profile).
+struct Act: View {
+    var row: Row
+    var compact = false
+
+    @ViewBuilder private var label: some View {
+        let label = Label(row.value.isEmpty ? row.title : row.value, systemImage: row.symbol ?? row.action?.symbol ?? "")
+        if compact { label.labelStyle(.iconOnly) } else { label }
+    }
+
+    var body: some View {
+        Group {
+            if !row.children.isEmpty {
+                Menu {
+                    ForEach(row.children, id: \.title) { choice in
+                        Button { choice.action.map(carryOut) } label: { Label(choice.title, systemImage: choice.symbol ?? "") }
+                    }
+                } label: {
+                    label
+                }
+                .fixedSize()
+            } else if case .awake(_, nil)? = row.action {
+                // Lit while Fleet keeps the Mac awake; a click lets it sleep again.
+                Toggle(isOn: Binding(get: { true }, set: { _ in row.action.map(carryOut) })) { label }.toggleStyle(.button)
+            } else {
+                Button { row.action.map(carryOut) } label: { label }
+            }
+        }
+        // A tooltip names what the button does not: an icon alone, or a menu showing only its choice.
+        .help(row.note ?? (compact || !row.value.isEmpty ? row.title : ""))
+    }
+}
+
 struct Tile: View {
     var row: Row
     var share: Double?

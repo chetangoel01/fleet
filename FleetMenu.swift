@@ -144,7 +144,7 @@ enum Action {
     /// The icon drawn before a row that does this.
     var symbol: String {
         switch self {
-        case .awake(_, let minutes): minutes == nil ? "moon.zzz" : "cup.and.saucer"
+        case .awake(_, let minutes): minutes == nil ? "cup.and.saucer.fill" : "cup.and.saucer"
         case .open: "arrow.up.forward.square"
         case .claude: "bubble.left"
         case .terminal: "terminal"
@@ -414,9 +414,11 @@ struct Details {
     var now: [Row] = []         // what to look at first: battery, power, CPU, memory
     var more: [Row] = []        // background: swap, the busiest process, what keeps it awake, uptime
     var storage: [Row] = []     // drives and the last backup
-    var actions: [Row] = []     // what can be done to this Mac
-    var fan: Row?               // this Mac's fan profile and the choices: on the menu's first screen, and a button in the window
-    var flyout: [Row] { now + more + [.separator] + storage + [.separator] + actions }
+    var quick: [Row] = []       // what is done to a Mac most, drawn as icons in the window: share its screen, open a terminal, keep it awake, back it up
+    var actions: [Row] = []     // the rest of what can be done to this Mac
+    var fan: Row?               // this Mac's fan profile and the choices: on the menu's first screen, and beside the icons in the window
+    /// In the menu a choice is spread out, each option a row of its own.
+    var flyout: [Row] { now + more + [.separator] + storage + [.separator] + quick.flatMap { $0.children.isEmpty ? [$0] : $0.children } + actions }
 }
 
 func details(_ status: Status, on machine: Machine, now: Date) -> Details {
@@ -491,14 +493,18 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     }
 
     if let ssh = machine.ssh {
-        groups.actions.append(Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)))
-        groups.actions.append(Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)")))
+        groups.quick.append(Row(title: "Share Screen", symbol: "rectangle.on.rectangle", action: .open(URL(string: "vnc://\(ssh)")!)))
+        groups.quick.append(Row(title: "Open Terminal", action: .terminal(command: "ssh \(ssh)")))
     }
     if let kept {
-        groups.actions += kept.on
-            ? [Row(title: "Stop Keeping Awake", action: .awake(machine, minutes: nil))]
-            : [Row(title: "Keep Awake", action: .awake(machine, minutes: 0)),
-               Row(title: "Keep Awake for 2 Hours", action: .awake(machine, minutes: 120))]
+        groups.quick.append(kept.on
+            ? Row(title: "Stop Keeping Awake", action: .awake(machine, minutes: nil))
+            : Row(title: "Keep Awake", symbol: "cup.and.saucer", children: [
+                Row(title: "Keep Awake", action: .awake(machine, minutes: 0)),
+                Row(title: "Keep Awake for 2 Hours", action: .awake(machine, minutes: 120))]))
+    }
+    if backup.automatic == true {
+        groups.quick.append(Row(title: "Back Up Now", symbol: "clock.arrow.circlepath", action: .run("Back Up Now", command: quietly(machine, "tmutil startbackup"))))
     }
     if let cooling = status.cooling, cooling.state == "ok" {
         let current = fanProfile(cooling)
@@ -513,9 +519,6 @@ func details(_ status: Status, on machine: Machine, now: Date) -> Details {
     }
     for stopped in status.containers.items ?? [] where stopped.state != "running" {
         groups.actions.append(Row(title: "Start \(stopped.name)", symbol: "play", action: .run("Start \(stopped.name)", command: quietly(machine, "docker start \(stopped.name)"))))
-    }
-    if backup.automatic == true {
-        groups.actions.append(Row(title: "Back Up Now", symbol: "clock.arrow.circlepath", action: .run("Back Up Now", command: quietly(machine, "tmutil startbackup"))))
     }
     groups.actions.append(Row(title: "Clean Up Disk…", action: .claude(prompt: cleanUpPrompt(machine))))
     groups.actions.append(Row(title: "Free Up Memory…", action: .claude(prompt: memoryPrompt(machine))))
